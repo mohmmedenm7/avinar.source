@@ -1,22 +1,25 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { User, Menu, LogOut } from "lucide-react";
+import { User, Menu, LogOut, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useToast } from "./ui/use-toast";
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const email = localStorage.getItem('email');
     setIsLoggedIn(!!email);
+    setIsAdmin(email === 'admin@gmail.com');
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('email');
     setIsLoggedIn(false);
+    setIsAdmin(false);
     toast({
       title: "تم تسجيل الخروج بنجاح",
     });
@@ -42,10 +45,20 @@ const Navbar = () => {
               الأسعار
             </Link>
             {isLoggedIn ? (
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 ml-2" />
-                تسجيل الخروج
-              </Button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link to="/admin">
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4 ml-2" />
+                      لوحة التحكم
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 ml-2" />
+                  تسجيل الخروج
+                </Button>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link to="/login">
