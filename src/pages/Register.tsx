@@ -4,22 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { signUp } from "@/lib/auth";
 
 const Register = () => {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    toast({
-      title: "تم إنشاء الحساب بنجاح",
-      description: "يمكنك الآن تسجيل الدخول",
-    });
-    navigate("/login");
+    try {
+      const { error } = await signUp(email, password);
+      
+      if (error) {
+        toast({
+          title: "خطأ في التسجيل",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "تم التسجيل بنجاح",
+          description: "يمكنك الآن تسجيل الدخول",
+        });
+        navigate("/login");
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ في التسجيل",
+        description: "حدث خطأ غير متوقع",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,16 +53,6 @@ const Register = () => {
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-right block">الاسم الكامل</label>
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                dir="rtl"
-              />
-            </div>
-            <div className="space-y-2">
               <label className="text-right block">البريد الإلكتروني</label>
               <Input
                 type="email"
@@ -48,6 +60,7 @@ const Register = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 dir="rtl"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -58,9 +71,23 @@ const Register = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 dir="rtl"
+                disabled={loading}
+                minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full">إنشاء حساب</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "جاري التسجيل..." : "إنشاء حساب"}
+            </Button>
+            <p className="text-center mt-4">
+              لديك حساب بالفعل؟{" "}
+              <Button
+                variant="link"
+                className="p-0"
+                onClick={() => navigate("/login")}
+              >
+                سجل دخول
+              </Button>
+            </p>
           </form>
         </CardContent>
       </Card>

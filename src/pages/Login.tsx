@@ -4,29 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { signIn } from "@/lib/auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (email === "admin@gmail.com" && password === "123456789") {
-      localStorage.setItem('email', email);
-      toast({
-        title: "تم تسجيل الدخول بنجاح",
-        description: "مرحباً بك في لوحة التحكم",
-      });
-      navigate("/admin");
-    } else {
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        toast({
+          title: "خطأ في تسجيل الدخول",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "تم تسجيل الدخول بنجاح",
+          description: "مرحباً بك في منصة التعلم",
+        });
+        navigate("/courses");
+      }
+    } catch (error) {
       toast({
         title: "خطأ في تسجيل الدخول",
-        description: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+        description: "حدث خطأ غير متوقع",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,6 +60,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 dir="rtl"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -56,9 +71,22 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 dir="rtl"
+                disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full">دخول</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "جاري تسجيل الدخول..." : "دخول"}
+            </Button>
+            <p className="text-center mt-4">
+              ليس لديك حساب؟{" "}
+              <Button
+                variant="link"
+                className="p-0"
+                onClick={() => navigate("/register")}
+              >
+                سجل الآن
+              </Button>
+            </p>
           </form>
         </CardContent>
       </Card>
