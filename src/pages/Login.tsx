@@ -14,8 +14,8 @@ const Login = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // تحقق من بيانات الدخول
     if (email === "admin@gmail.com" && password === "123456789") {
+      localStorage.setItem('email', email);
       toast({
         title: "تم تسجيل الدخول بنجاح",
         description: "مرحباً بك في لوحة التحكم",

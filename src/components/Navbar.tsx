@@ -1,8 +1,28 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { User, Menu } from "lucide-react";
+import { User, Menu, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useToast } from "./ui/use-toast";
 
 const Navbar = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const email = localStorage.getItem('email');
+    setIsLoggedIn(!!email);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('email');
+    setIsLoggedIn(false);
+    toast({
+      title: "تم تسجيل الخروج بنجاح",
+    });
+    navigate('/');
+  };
+
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
@@ -21,17 +41,24 @@ const Navbar = () => {
             <Link to="/pricing" className="text-gray-700 hover:text-blue-600">
               الأسعار
             </Link>
-            <div className="flex items-center gap-2">
-              <Link to="/login">
-                <Button variant="outline" size="sm">
-                  <User className="h-4 w-4 ml-2" />
-                  تسجيل الدخول
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button size="sm">إنشاء حساب</Button>
-              </Link>
-            </div>
+            {isLoggedIn ? (
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 ml-2" />
+                تسجيل الخروج
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link to="/login">
+                  <Button variant="outline" size="sm">
+                    <User className="h-4 w-4 ml-2" />
+                    تسجيل الدخول
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm">إنشاء حساب</Button>
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
