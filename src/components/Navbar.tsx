@@ -1,85 +1,52 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "./ui/button";
-import { User, Menu, LogOut, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useToast } from "./ui/use-toast";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    const email = localStorage.getItem('email');
-    setIsLoggedIn(!!email);
-    setIsAdmin(email === 'admin@gmail.com');
+    const loggedInEmail = localStorage.getItem("email");
+    if (loggedInEmail) {
+      setIsLoggedIn(true);
+      setUserEmail(loggedInEmail);
+    }
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('email');
+    localStorage.removeItem("email");
     setIsLoggedIn(false);
-    setIsAdmin(false);
-    toast({
-      title: "تم تسجيل الخروج بنجاح",
-    });
-    navigate('/');
+    setUserEmail("");
+    navigate("/login");
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Link to="/" className="text-xl font-bold text-blue-600">
-              منصة التعلم
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4 space-x-reverse">
-            <Link to="/courses" className="text-gray-700 hover:text-blue-600">
-              الدورات
-            </Link>
-            <Link to="/pricing" className="text-gray-700 hover:text-blue-600">
-              الأسعار
-            </Link>
-            {isLoggedIn ? (
-              <div className="flex items-center gap-2">
-                {isAdmin && (
-                  <Link to="/admin">
-                    <Button variant="outline" size="sm">
-                      <Settings className="h-4 w-4 ml-2" />
-                      لوحة التحكم
-                    </Button>
-                  </Link>
-                )}
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 ml-2" />
-                  تسجيل الخروج
+    <nav className="bg-gray-50 p-4 shadow-2xl">
+      <div className="container mx-auto flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <Link to="/" className="text-gray-800 text-2xl hover:underline">
+           AVinar
+          </Link>
+        </div>
+        <div>
+          {isLoggedIn ? (
+            <>
+              <span className="text-gray-800 mr-4">مرحباً، {userEmail}</span>
+              {(userEmail === "admin@gmail.com" || userEmail === "mohmedenym@gmail.com") && (
+                <Button className="mr-4 bg-gray hover:bg-gray-200 text-gray-800 shadow-md" onClick={() => navigate("/AdminDashboard")}>
+                  لوحة التحكم
                 </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login">
-                  <Button variant="outline" size="sm">
-                    <User className="h-4 w-4 ml-2" />
-                    تسجيل الدخول
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button size="sm">إنشاء حساب</Button>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <Button variant="ghost" size="icon">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
+              )}
+              <Button className="bg-red-500 hover:bg-red-700 text-white" onClick={handleLogout}>تسجيل الخروج</Button>
+            </>
+          ) : (
+            <>
+              <Button className="mr-4 bg-white hover:bg-gray-200 text-gray-800 shadow-md" onClick={() => navigate("/login")}>تسجيل الدخول</Button>
+              <Button className="bg-white hover:bg-gray-200 text-gray-800 shadow-md" onClick={() => navigate("/register")}>إنشاء حساب</Button>
+            </>
+          )}
         </div>
       </div>
     </nav>
