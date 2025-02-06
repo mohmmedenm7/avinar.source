@@ -11,13 +11,13 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminDashboard from "./pages/AdminDashboard";
-import Pricing from "./pages/Pricing";
+
 import Courses from "./pages/Courses";
 
 const queryClient = new QueryClient();
 
 const ProtectedAdminRoute = () => {
-  const isAdmin = localStorage.getItem('email') === 'admin@gmail.com';
+  const isAdmin = localStorage.getItem('email') === 'admin@gmail.com' || localStorage.getItem('email') === 'mohmedenym@gmail.com';
   return isAdmin ? <AdminDashboard /> : <Navigate to="/login" />;
 };
 
@@ -36,7 +36,6 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/admin" element={<ProtectedAdminRoute />} />
-                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/courses" element={<Courses />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
