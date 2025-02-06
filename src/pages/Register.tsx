@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,15 @@ const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // تحقق من حالة تسجيل الدخول
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn) {
+      navigate("/courses");
+    }
+  }, [navigate]);
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     
