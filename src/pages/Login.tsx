@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,15 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  useEffect(() => {
+    // تحقق من حالة تسجيل الدخول
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn) {
+      navigate("/courses");
+    }
+  }, [navigate]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     
@@ -31,6 +39,8 @@ const Login = () => {
           title: "تم تسجيل الدخول بنجاح",
           description: "مرحباً بك في منصة التعلم",
         });
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("email", email); // تخزين البريد الإلكتروني
         navigate("/courses");
       }
     } catch (error) {
