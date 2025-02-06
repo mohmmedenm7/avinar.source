@@ -1,0 +1,49 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: rgb(22, 20, 24);
+  color: #bbb;
+  user-select: none;
+}
+
+.nft {
+  user-select: none;
+  max-width: 1000px; /* حجم الكرت أكبر */
+  margin: 5rem auto;
+  border: 1px solid #444;
+  background-color: #a9dde0;
+  box-shadow: 0 7px 20px 5px #00000088;
+  border-radius: .7rem;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  overflow: hidden;
+  transition: .5s all;
+  position: relative;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  width: 90%;
+  padding: 2rem; /* زيادة حجم الحشو داخل الكرت */
+  text-align: center;
+}
+
+h2 {
+  font-size: 2rem; /* تكبير حجم النص */
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background-color: white !important;
+  border: 1px solid #e0e0e0;
+  border-radius: var(--radius, 0.5rem);
+  box-shadow: var(--tw-shadow, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+  color: hsl(var(--card-foreground, 222.2 84% 4.9%));
+  padding: 16px;
+}
