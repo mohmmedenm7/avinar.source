@@ -9,7 +9,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-right">عن المنصة</h3>
             <p className="text-gray-600 text-right">
-              منصة تعليمية متكاملة تقدم دورات في مختلف المجالات مع شهادات معتمدة
+              منصة تعليمية متكاملة تقدم دورات في مختلف المجالات 
             </p>
           </div>
           <div>
@@ -39,7 +39,7 @@ const Footer = () => {
         <div className="mt-8 pt-8 border-t text-center">
           <p className="text-gray-600 flex items-center justify-center">
             <Copyright className="h-4 w-4 ml-1" />
-            جميع الحقوق محفوظة 2024
+            ,Avinar.center 2025
           </p>
         </div>
       </div>
