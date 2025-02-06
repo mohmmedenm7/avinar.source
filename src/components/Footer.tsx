@@ -20,11 +20,7 @@ const Footer = () => {
                   الدورات المتاحة
                 </Link>
               </li>
-              <li>
-                <Link to="/pricing" className="text-gray-600 hover:text-blue-600">
-                  خطط الأسعار
-                </Link>
-              </li>
+           
               <li>
                 <Link to="/register" className="text-gray-600 hover:text-blue-600">
                   التسجيل
@@ -35,8 +31,8 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4 text-right">تواصل معنا</h3>
             <ul className="space-y-2 text-right">
-              <li className="text-gray-600">البريد الإلكتروني: info@example.com</li>
-              <li className="text-gray-600">الهاتف: +123 456 789</li>
+              <li className="text-gray-600">البريد الإلكتروني: contact@avinar.center</li>
+              <li className="text-gray-600"> </li>
             </ul>
           </div>
         </div>
