@@ -1,0 +1,127 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: rgb(22, 20, 24);
+  color: #bbb;
+  user-select: none;
+}
+
+.nft {
+  user-select: none;
+  max-width: 1000px; /* حجم الكرت أكبر */
+  margin: 5rem auto;
+  border: 1px solid #444;
+  background-color: #b9b9b9;
+  box-shadow: 0 7px 20px 5px #00000088;
+  border-radius: .7rem;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  overflow: hidden;
+  transition: .5s all;
+  position: relative;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  width: 90%;
+  padding: 2rem; /* زيادة حجم الحشو داخل الكرت */
+  text-align: center;
+}
+
+h2 {
+  font-size: 2rem; /* تكبير حجم النص */
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.price {
+  font-size: 2.5rem; /* تكبير حجم النص */
+  color: #ee83e5;
+  margin-bottom: 1rem;
+}
+
+.features {
+  list-style: none;
+  padding: 0;
+}
+
+.features li {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.nft:hover {
+  border: 1px solid #666;
+  box-shadow: 0 7px 50px 10px #000000aa;
+  transform: scale(1.015);
+  filter: brightness(1.3);
+}
+
+/* لمعان */
+.nft::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+  transition: 0.7s all;
+}
+
+.nft:hover::before {
+  left: 125%;
+  transition: 0.7s all;
+}
+
+.card {
+  opacity: 0.2; /* 30% شفافية */
+  transition: opacity 0.3s;
+}
+
+.card:hover {
+  opacity: 1;
+}
+
+.scientific-shape {
+  opacity: 0.3; /* تحديد شفافية الأشكال عند عدم مرور الماوس */
+  transition: opacity 0.3s;
+}
+
+.scientific-shape.visible {
+  opacity: 1; /* تحديد شفافية الأشكال عند مرور الماوس */
+}
+.background {
+  background-image: url('/images/background.png.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.45; /* ضبط الشفافية حسب الحاجة */
+  z-index: 1; /* تأكد من أن الخلفية تظهر فوق العناصر الأخرى */
+  position: absolute; /* تواجد الخلفية بشكل دائم */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.background-image {
+  width: 100%;
+  position: absolute; /* لجعل الصورة في موقع مطلق */
+  top: 0;
+  left: 0;
+  z-index: -1; /* تأكد من أن الصورة تظهر تحت العناصر الأخرى */
+}
+.full-width-image {
+  width: 100%;
+  display: block;
+  z-index: 0; /* التأكد من أن الصورة تظهر تحت العناصر الأخرى */
+}
