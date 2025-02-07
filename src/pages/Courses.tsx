@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import './CardStyles.css'; // افتراض أن ملف CSS يسمى styles.css
+import './CardStyles.css'; // افتراض أن ملف CSS يسمى CardStyles.css
 
 const Courses = () => {
   const [courses, setCourses] = useState([]);
 
   useEffect(() => {
-    // يمكنك استبدال هذا الكود بتحميل الكورسات من قاعدة البيانات أو أي مصدر آخر
-    const fetchedCourses = [
-     ];
-
-    setCourses(fetchedCourses);
+    const storedCourses = JSON.parse(localStorage.getItem("courses")) || [];
+    setCourses(storedCourses);
   }, []);
 
   return (
@@ -22,7 +19,7 @@ const Courses = () => {
         {courses.length > 0 ? (
           <div className="grid md:grid-cols-3 gap-8">
             {courses.map((course) => (
-             <Card key={course.id} style={{ backgroundColor: 'white' }}>
+              <Card key={course.id} style={{ backgroundColor: 'white' }}>
                 <CardHeader>
                   <img src={course.imageUrl} alt={course.title} className="w-full h-48 object-cover mb-4" />
                   <CardTitle className="text-right">{course.title}</CardTitle>
