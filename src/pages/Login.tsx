@@ -1,105 +1,150 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { signIn } from "@/lib/auth";
+
+interface LoginResponse {
+  token?: string;
+  accessToken?: string;
+  user?: {
+    email?: string;
+    role?: string;
+  };
+  email?: string;
+  role?: string;
+  message?: string;
+}
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
+  // إذا المستخدم مسجل أصلاً → يحول حسب الدور
   useEffect(() => {
-    // تحقق من حالة تسجيل الدخول
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-    if (isLoggedIn) {
-      navigate("/courses");
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (token && role) {
+      if (role === "admin") navigate("/AdminDashboard", { replace: true });
+      else if (role === "manager") navigate("/InstructorDashboard", { replace: true });
+      else navigate("/UserDashboard", { replace: true });
     }
   }, [navigate]);
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      const { error } = await signIn(email, password);
-      
-      if (error) {
-        toast({
-          title: "خطأ في تسجيل الدخول",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "تم تسجيل الدخول بنجاح",
-          description: "مرحباً بك في منصة التعلم",
-        });
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("email", email); // تخزين البريد الإلكتروني
-        navigate("/courses");
-      }
-    } catch (error) {
-      toast({
-        title: "خطأ في تسجيل الدخول",
-        description: "حدث خطأ غير متوقع",
-        variant: "destructive",
+      const res = await fetch("http://localhost:8000/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+
+      const data: LoginResponse = await res.json().catch(() => ({}));
+      console.log("Login response:", data);
+
+      if (!res.ok) {
+        alert(data.message || `خطأ أثناء تسجيل الدخول (رمز ${res.status})`);
+        return;
+      }
+
+      // التحقق من الحقول الممكنة
+     const token = data.token;
+const userEmail = data.data?.email;
+const role = data.data?.role ?? "user";
+
+if (!token || !userEmail) {
+  alert("استجابة غير صحيحة من السيرفر.");
+  return;
+}
+
+// حفظ البيانات
+localStorage.setItem("token", token);
+localStorage.setItem("email", userEmail);
+localStorage.setItem("role", role);
+
+      // تحديث Navbar
+      window.dispatchEvent(new Event("storage"));
+      window.location.reload();
+
+
+      alert("تم تسجيل الدخول بنجاح.");
+
+      // تحويل حسب الدور
+      if (role === "admin") navigate("/AdminDashboard", { replace: true });
+      else if (role === "manager") navigate("/InstructorDashboard", { replace: true });
+      else navigate("/UserDashboard", { replace: true });
+
+    } catch (err) {
+      console.error(err);
+      alert("خطأ في الاتصال بالسيرفر.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-[400px]">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">تسجيل الدخول</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-right block">البريد الإلكتروني</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                dir="rtl"
-                disabled={loading}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-right block">كلمة المرور</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                dir="rtl"
-                disabled={loading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "جاري تسجيل الدخول..." : "دخول"}
-            </Button>
-            <p className="text-center mt-4">
-              ليس لديك حساب؟{" "}
-              <Button
-                variant="link"
-                className="p-0"
-                onClick={() => navigate("/register")}
-              >
-                سجل الآن
-              </Button>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#f3f4f6",
+      }}
+    >
+      <div
+        style={{
+          width: 400,
+          padding: 20,
+          background: "#fff",
+          borderRadius: 8,
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        <h2 style={{ textAlign: "center", marginBottom: 20 }}>تسجيل الدخول</h2>
+
+        <form onSubmit={handleLogin}>
+          <div style={{ marginBottom: 12 }}>
+            <label>البريد الإلكتروني</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ width: "100%", padding: 8, marginTop: 4 }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label>كلمة المرور</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ width: "100%", padding: 8, marginTop: 4 }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: 10,
+              background: "#3b82f6",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+            }}
+          >
+            {loading ? "جاري تسجيل الدخول..." : "دخول"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
