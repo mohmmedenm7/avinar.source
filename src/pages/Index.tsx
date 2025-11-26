@@ -35,12 +35,26 @@ const Index = () => {
       .then(res => setVisitorCount(res.data.count))
       .catch(err => console.error(err));
 
+    // Geolocation logging
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log("Latitude:", pos.coords.latitude);
+          console.log("Longitude:", pos.coords.longitude);
+          console.log("Accuracy:", pos.coords.accuracy + " meters");
+        },
+        (err) => {
+          console.error("User denied location:", err);
+        }
+      );
+    }
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
     };
   }, []); // ← مصفوفة فارغة لتجنب التكرار
 
-  const backgroundStyle = {
+  const backgroundStyle: React.CSSProperties = {
     background: `radial-gradient(circle 500px at ${position.x}px ${position.y}px, #EFDECD, #5D8AA8)`,
     minHeight: "100vh",
     position: "relative",
