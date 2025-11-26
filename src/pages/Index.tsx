@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Book, Users, ArrowRight } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import './styles.css';
 import { Link } from "react-router-dom";
+import { API_BASE_URL } from "@/config/env";
+import './styles.css';
 
 const Index = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [shapes, setShapes] = useState([]);
+  const [visitorCount, setVisitorCount] = useState(0); // ← عدد الزوار
 
+  // متابعة حركة الماوس
   const handleMouseMove = (event) => {
     setPosition({ x: event.clientX, y: event.clientY });
     setShapes(shapes.map(shape => {
@@ -19,12 +21,24 @@ const Index = () => {
     }));
   };
 
+  // effect لتسجيل الزوار وجلب العدد
   useEffect(() => {
     window.addEventListener("mousemove", handleMouseMove);
+
+    // تسجيل الزائر مرة واحدة
+    axios.post(`${API_BASE_URL}/api/visitors/add`)
+      .then(res => console.log("Visitor added:", res.data))
+      .catch(err => console.error(err));
+
+    // جلب عدد الزوار مرة واحدة
+    axios.get(`${API_BASE_URL}/api/visitors/count`)
+      .then(res => setVisitorCount(res.data.count))
+      .catch(err => console.error(err));
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [shapes]);
+  }, []); // ← مصفوفة فارغة لتجنب التكرار
 
   const backgroundStyle = {
     background: `radial-gradient(circle 500px at ${position.x}px ${position.y}px, #EFDECD, #5D8AA8)`,
@@ -36,7 +50,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col" style={backgroundStyle}>
       <main className="flex-grow relative background">
-       <div className="custom-cursor" style={{ left: `${position.x}px`, top: `${position.y}px`, zIndex: 2 }} />
+        <div className="custom-cursor" style={{ left: `${position.x}px`, top: `${position.y}px`, zIndex: 2 }} />
         {shapes.map(shape => (
           shape.visible && (
             <svg key={shape.id} className="scientific-shape" width="100" height="100" fill="none" stroke="#FFFFFF" strokeWidth="2" style={{ left: shape.x, top: shape.y }}>
@@ -47,13 +61,18 @@ const Index = () => {
             </svg>
           )
         ))}
+
         <div className="container mx-auto px-4 py-16">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">AVinar</h1>
+            <p className="mb-2">عدد زوار الموقع: {visitorCount}</p> {/* ← عرض عدد الزوار */}
             <Link to="/courses">
-              <Button className="bg-blue-600 hover:bg-blue-700 custom-button"> ابدأ التعلم الآن <ArrowRight className="mr-2 h-4 w-4" /> </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 custom-button">
+                ابدأ التعلم الآن <ArrowRight className="mr-2 h-4 w-4" />
+              </Button>
             </Link>
           </div>
+
           <div className="grid md:grid-cols-3 gap-6 mt-16">
             <Card className="text-right card">
               <CardHeader>
@@ -66,6 +85,7 @@ const Index = () => {
                 <p className="text-gray-600">مجموعة متنوعة من الدورات في مختلف المجالات</p>
               </CardContent>
             </Card>
+
             <Card className="text-right card">
               <CardHeader>
                 <CardTitle className="flex items-center justify-end">
@@ -77,6 +97,7 @@ const Index = () => {
                 <p className="text-gray-600">تعلم على يد أفضل المدربين المتخصصين</p>
               </CardContent>
             </Card>
+
             <Card className="text-right card">
               <CardHeader>
                 <CardTitle className="flex items-center justify-end">

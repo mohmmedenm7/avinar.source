@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import StripeCheckout from "./StripeCheckout";
+import { API_BASE_URL } from '@/config/env';
 
 interface Product {
   _id: string;
@@ -46,7 +47,7 @@ const CreateOrder = () => {
 
     try {
       const res = await axios.get(
-        `http://localhost:8000/api/v1/products/${courseId}`,
+        `${API_BASE_URL}/api/v1/products/${courseId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -70,7 +71,7 @@ const CreateOrder = () => {
     setLoading(true);
     try {
       const res = await axios.post(
-        `http://localhost:8000/api/v1/orders/${courseId}`,
+        `${API_BASE_URL}/api/v1/orders/${courseId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -1,7 +1,8 @@
-import { Button } from "@/components/ui/button";
+﻿import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { useState } from "react";
+import { API_BASE_URL } from '@/config/env';
 
 interface Props {
   orderId: string;
@@ -16,7 +17,7 @@ const StripeCheckout = ({ orderId }: Props) => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://localhost:8000/api/v1/orders/checkout-session/${orderId}`,
+        `${API_BASE_URL}/api/v1/orders/checkout-session/${orderId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

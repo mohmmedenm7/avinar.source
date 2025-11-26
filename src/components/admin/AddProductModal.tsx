@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Upload, X, Play, CheckCircle2 } from "lucide-react";
+import { API_BASE_URL } from '@/config/env';
 
 export const AddProductModal = ({ 
   show = true, 
@@ -82,7 +83,7 @@ export const AddProductModal = ({
       fd.append("imageCover", imageCover);
       fd.append("videos", video); // جرّب "videos" بدل "video"
 
-      const response = await fetch("http://localhost:8000/api/v1/products", {
+      const response = await fetch(`${API_BASE_URL}/api/v1/products`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

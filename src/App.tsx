@@ -1,4 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
+﻿import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import CartPage from "./pages/CartPage"; // ✅ إضافة صفحة السلة
 import AdminOrderDetails from "./pages/admin/AdminOrderDetails";
+import CourseViewPage from "./pages/CourseViewPage";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,8 @@ const App = () => (
                 <Route path="/checkout" element={<ProtectedCheckoutRoute />} />
                 <Route path="/my-orders" element={<ProtectedMyOrdersRoute />} />
                 <Route path="/order/:orderId" element={<ProtectedOrderDetailsRoute />} />
+                 <Route path="/course/:courseId" element={<CourseViewPage />} />
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

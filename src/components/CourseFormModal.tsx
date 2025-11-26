@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
+import { API_BASE_URL } from '@/config/env';
 
 interface Course {
   _id?: string;
@@ -96,13 +97,13 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
       let res;
       if (course?._id) {
         // تعديل
-        res = await axios.put(`http://localhost:8000/api/v1/products/${course._id}`, fd, {
+        res = await axios.put(`${API_BASE_URL}/api/v1/products/${course._id}`, fd, {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast({ title: "تم تعديل الكورس بنجاح" });
       } else {
         // إضافة
-        res = await axios.post("http://localhost:8000/api/v1/products", fd, {
+        res = await axios.post(`${API_BASE_URL}/api/v1/products`, fd, {
           headers: { Authorization: `Bearer ${token}` },
         });
         toast({ title: "تم إضافة الكورس بنجاح" });

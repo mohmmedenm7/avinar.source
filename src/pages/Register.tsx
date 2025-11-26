@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
+import { API_BASE_URL } from '@/config/env';
 
 interface RegisterResponse {
   token?: string;
@@ -85,7 +86,7 @@ export default function Register() {
       if (role === "manager") {
         // الخطوة 1: تسجيل دخول الأدمن
         setProgress("🔐 جاري التحقق من بيانات الأدمن...");
-        const loginRes = await fetch("http://localhost:8000/api/v1/auth/login", {
+        const loginRes = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -116,7 +117,7 @@ export default function Register() {
 
         // الخطوة 2: إنشاء حساب المدرب باستخدام التوكن
         setProgress("👨‍🏫 جاري إنشاء حساب المدرب...");
-        const registerRes = await fetch("http://localhost:8000/api/v1/users", {
+        const registerRes = await fetch(`${API_BASE_URL}/api/v1/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -148,7 +149,7 @@ export default function Register() {
       } else {
         // للمستخدمين العاديين - استخدم signup العادي
         setProgress("📝 جاري إنشاء الحساب...");
-        const signupRes = await fetch("http://localhost:8000/api/v1/auth/signup", {
+        const signupRes = await fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
@@ -7,6 +7,7 @@ import { ProductsComponent } from "@/components/admin/ProductsComponent";
 import { UsersComponent } from "@/components/admin/UsersComponent";
 import { LogOut, Users, Box, ShoppingCart, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from '@/config/env';
 
 interface User {
   _id: string;
@@ -70,7 +71,7 @@ const AdminDashboard = () => {
     setLoadingUsers(true);
     setErrorUsers(null);
     try {
-      const res = await axios.get("http://localhost:8000/api/v1/users", {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data?.data || []);
@@ -87,7 +88,7 @@ const AdminDashboard = () => {
     setLoadingProducts(true);
     setErrorProducts(null);
     try {
-      const res = await axios.get("http://localhost:8000/api/v1/products", {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/products`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts(res.data?.data || []);
@@ -104,7 +105,7 @@ const AdminDashboard = () => {
     setLoadingOrders(true);
     setErrorOrders(null);
     try {
-      const res = await axios.get("http://localhost:8000/api/v1/orders", {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(res.data?.data || []);

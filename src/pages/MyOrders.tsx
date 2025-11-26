@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from '@/config/env';
 
 interface OrderItem {
   productId: string;
@@ -59,7 +60,7 @@ const MyOrders = () => {
     setError(null);
     try {
       // GET /api/v1/orders - gets current user's orders
-      const res = await axios.get("http://localhost:8000/api/v1/orders", {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(res.data?.data || []);

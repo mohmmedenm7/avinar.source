@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+import { API_BASE_URL } from '@/config/env';
 
 const AdminOrderDetails = () => {
   const { id } = useParams();
@@ -10,7 +11,7 @@ const AdminOrderDetails = () => {
     const loadOrder = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:8000/api/v1/orders/${id}`
+          `${API_BASE_URL}/api/v1/orders/${id}`
         );
         setOrder(res.data.data);
       } catch (err) {

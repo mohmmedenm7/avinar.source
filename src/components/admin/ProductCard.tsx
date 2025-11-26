@@ -1,9 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 import axios from "axios";
 import { useToast } from "@/components/ui/use-toast";
+import { API_BASE_URL } from '@/config/env';
 
 export const ProductCard = ({ product, token, fetchProducts, onEdit }) => {
   const { toast } = useToast();
@@ -18,7 +19,7 @@ export const ProductCard = ({ product, token, fetchProducts, onEdit }) => {
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm("هل تريد حذف هذا الكورس؟")) return;
     try {
-      await axios.delete(`http://localhost:8000/api/v1/products/${productId}`, {
+      await axios.delete(`${API_BASE_URL}/api/v1/products/${productId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast({ title: "✓ تم حذف الكورس" });

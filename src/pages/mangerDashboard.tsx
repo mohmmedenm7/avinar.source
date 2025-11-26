@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { BookOpen, LogOut, Plus, Edit2, Trash2, Users, DollarSign } from "lucide-react";
+import { API_BASE_URL } from '@/config/env';
 
 interface Course {
   _id: string;
@@ -50,7 +51,7 @@ export default function InstructorDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/products", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/products`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -103,7 +104,7 @@ export default function InstructorDashboard() {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/products", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/products`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -141,7 +142,7 @@ export default function InstructorDashboard() {
 
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/products/${editingCourse._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/products/${editingCourse._id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
@@ -165,7 +166,7 @@ export default function InstructorDashboard() {
 
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/products/${courseId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/products/${courseId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

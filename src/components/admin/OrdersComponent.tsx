@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
+import { API_BASE_URL } from '@/config/env';
 
 interface OrderItem {
   product?: {
@@ -38,33 +39,115 @@ export const OrdersComponent = ({
   searchQuery,
 }: Props) => {
   const { toast } = useToast();
+  const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null);
+  const [localOrders, setLocalOrders] = useState<Order[]>(orders);
+
+  React.useEffect(() => {
+    setLocalOrders(orders);
+  }, [orders]);
 
   const handleConfirmPayment = async (orderId: string) => {
+    if (!token) {
+      toast({ 
+        title: "خطأ", 
+        description: "لم يتم العثور على التوكن",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setLoadingOrderId(orderId);
+
     try {
-      await axios.put(
-        `http://localhost:8000/api/v1/orders/${orderId}/pay`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+      console.log("Sending payment confirmation for order:", orderId);
+      
+      const response = await axios.put(
+        `${API_BASE_URL}/api/v1/orders/${orderId}/pay`,
+
+        { status: "paid" },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       );
-      toast({ title: "✓ تم تأكيد الدفع" });
-      fetchOrders();
+
+      console.log("✓ Payment confirmed:", response.data);
+
+      // Check if response contains updated order data
+      const updatedOrderFromServer = response.data?.data || response.data;
+      console.log("Server response data:", updatedOrderFromServer);
+
+      // تحديث الحالة المحلية فوراً
+      const updatedOrders = localOrders.map((order) =>
+        order._id === orderId 
+          ? { 
+              ...order, 
+              isPaid: updatedOrderFromServer?.isPaid ?? true,
+              ...updatedOrderFromServer
+            } 
+          : order
+      );
+      setLocalOrders(updatedOrders);
+
+      toast({
+        title: "✓ تم تأكيد الدفع",
+        description: "تم تحديث حالة الطلب بنجاح",
+      });
+      
+      // استدعاء fetchOrders للتأكد من التزامن مع الـ Backend
+      setTimeout(() => {
+        fetchOrders();
+      }, 500);
+
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || "فشل تأكيد الدفع";
-      toast({ title: errMsg, variant: "destructive" });
+      console.error("❌ Payment error details:", {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        data: err.response?.data,
+      });
+      
+      let errMsg = "فشل تأكيد الدفع";
+      
+      if (err.response?.status === 403) {
+        errMsg = "ليس لديك الصلاحيات لتحديث حالة الطلب. يجب أن تكون admin أو manager";
+      } else if (err.response?.data?.message) {
+        errMsg = err.response.data.message;
+      } else if (err.response?.status) {
+        errMsg = `خطأ من الخادم: ${err.response.status}`;
+      }
+      
+      toast({
+        title: "خطأ",
+        description: errMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingOrderId(null);
     }
   };
 
-  if (orders.length === 0) {
+  // Filter orders based on searchQuery
+  const filteredOrders = localOrders.filter((order) =>
+    order._id.includes(searchQuery) ||
+    order.user?.name?.includes(searchQuery) ||
+    order.user?.email?.includes(searchQuery)
+  );
+
+  if (filteredOrders.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 text-lg">📦 لا توجد طلبات</p>
+        <p className="text-gray-500 text-lg">
+          🔦 {localOrders.length === 0 ? "لا توجد طلبات" : "لا توجد نتائج للبحث"}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {orders.map((order) => (
+      {filteredOrders.map((order) => (
         <Card
           key={order._id}
           className="p-5 border border-gray-200 hover:shadow-md transition-all"
@@ -100,7 +183,7 @@ export const OrdersComponent = ({
               <div className="text-right">
                 <p className="text-xs text-gray-600 font-medium mb-1">الحالة</p>
                 <span
-                  className={`inline-block px-3 py-1 text-xs font-medium rounded ${
+                  className={`inline-block px-3 py-1 text-xs font-medium rounded transition-colors ${
                     order.isPaid
                       ? "bg-green-100 text-green-700"
                       : "bg-yellow-100 text-yellow-700"
@@ -112,10 +195,11 @@ export const OrdersComponent = ({
 
               {!order.isPaid && (
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-3"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   onClick={() => handleConfirmPayment(order._id)}
+                  disabled={loadingOrderId === order._id}
                 >
-                  تأكيد
+                  {loadingOrderId === order._id ? "جاري..." : "تأكيد"}
                 </Button>
               )}
             </div>

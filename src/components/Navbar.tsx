@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -8,7 +8,8 @@ const Navbar = () => {
   const [role, setRole] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
+  // تابع تحديث الحالة عند تغير auth
+  const updateAuthStatus = () => {
     const token = localStorage.getItem("token");
     const email = localStorage.getItem("email");
     const storedRole = localStorage.getItem("role");
@@ -22,6 +23,17 @@ const Navbar = () => {
       setUserEmail("");
       setRole("");
     }
+  };
+
+  useEffect(() => {
+    // تحديث الحالة عند أول تحميل
+    updateAuthStatus();
+
+    // الاستماع لحدث authChanged من أي مكان
+    window.addEventListener("authChanged", updateAuthStatus);
+
+    // تنظيف الاستماع عند إزالة المكون
+    return () => window.removeEventListener("authChanged", updateAuthStatus);
   }, []);
 
   const handleLogout = () => {
@@ -29,9 +41,8 @@ const Navbar = () => {
     localStorage.removeItem("email");
     localStorage.removeItem("role");
 
-    setIsLoggedIn(false);
-    setUserEmail("");
-    setRole("");
+    // تحديث الحالة مباشرة
+    updateAuthStatus();
 
     navigate("/login");
   };
@@ -39,7 +50,6 @@ const Navbar = () => {
   return (
     <nav className="bg-gray-50 p-4 shadow-2xl">
       <div className="container mx-auto flex justify-between items-center">
-
         {/* الشعار */}
         <div className="flex items-center space-x-4">
           <Link to="/" className="text-gray-800 text-2xl hover:underline">

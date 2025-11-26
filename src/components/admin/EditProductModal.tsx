@@ -1,8 +1,9 @@
-import React from "react";
+﻿import React from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
+import { API_BASE_URL } from '@/config/env';
 
 const FIXED_QUANTITY = "1";
 const FIXED_CATEGORY = "691f6bd063a0a3709983d118";
@@ -33,7 +34,7 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
     if (formData.vedios?.length > 0) formData.vedios.forEach((f) => fd.append("vedios", f));
 
     try {
-      await axios.put(`http://localhost:8000/api/v1/products/${product._id}`, fd, {
+      await axios.put(`${API_BASE_URL}/api/v1/products/${product._id}`, fd, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast({ title: "✓ تم تعديل الكورس" });

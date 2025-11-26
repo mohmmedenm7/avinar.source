@@ -1,7 +1,8 @@
-import { Card } from "@/components/ui/card";
+﻿import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
+import { API_BASE_URL } from '@/config/env';
 
 interface User {
   _id: string;
@@ -28,7 +29,7 @@ export const UsersComponent = ({
     if (!window.confirm("هل تريد حذف هذا المستخدم؟")) return;
 
     try {
-      await axios.delete(`http://localhost:8000/api/v1/users/${userId}`, {
+      await axios.delete(`${API_BASE_URL}/api/v1/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast({ title: "✓ تم حذف المستخدم" });

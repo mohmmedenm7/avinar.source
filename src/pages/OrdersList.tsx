@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
+import { API_BASE_URL } from '@/config/env';
 
 interface Order {
   _id: string;
@@ -22,7 +23,7 @@ const OrdersList = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:8000/api/v1/orders", {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(res.data?.data || []);
@@ -42,7 +43,7 @@ const OrdersList = () => {
   const handlePayOrder = async (orderId: string) => {
     try {
       await axios.put(
-        `http://localhost:8000/api/v1/orders/${orderId}/pay`,
+        `${API_BASE_URL}/api/v1/orders/${orderId}/pay`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

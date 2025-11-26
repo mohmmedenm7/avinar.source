@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "@/config/env";
 
 interface LoginResponse {
   token?: string;
@@ -11,6 +12,10 @@ interface LoginResponse {
   email?: string;
   role?: string;
   message?: string;
+  data?: {
+    email?: string;
+    role?: string;
+  };
 }
 
 const Login = () => {
@@ -29,14 +34,15 @@ const Login = () => {
       else if (role === "manager") navigate("/InstructorDashboard", { replace: true });
       else navigate("/UserDashboard", { replace: true });
     }
-  }, [navigate]);
+  }, []); // لا شيء في dependencies
+
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -50,29 +56,25 @@ const Login = () => {
         return;
       }
 
-      // التحقق من الحقول الممكنة
-     const token = data.token;
-const userEmail = data.data?.email;
-const role = data.data?.role ?? "user";
+      const token = data.token;
+      const userEmail = data.data?.email;
+      const role = data.data?.role ?? "user";
 
-if (!token || !userEmail) {
-  alert("استجابة غير صحيحة من السيرفر.");
-  return;
-}
+      if (!token || !userEmail) {
+        alert("استجابة غير صحيحة من السيرفر.");
+        return;
+      }
 
-// حفظ البيانات
-localStorage.setItem("token", token);
-localStorage.setItem("email", userEmail);
-localStorage.setItem("role", role);
+      // حفظ البيانات
+      // حفظ البيانات
+      localStorage.setItem("token", token);
+      localStorage.setItem("email", userEmail);
+      localStorage.setItem("role", role);
 
-      // تحديث Navbar
-      window.dispatchEvent(new Event("storage"));
-      window.location.reload();
+      // إرسال حدث لتحديث Navbar
+      window.dispatchEvent(new Event("authChanged"));
 
-
-      alert("تم تسجيل الدخول بنجاح.");
-
-      // تحويل حسب الدور
+      // التحويل حسب الدور مباشرة
       if (role === "admin") navigate("/AdminDashboard", { replace: true });
       else if (role === "manager") navigate("/InstructorDashboard", { replace: true });
       else navigate("/UserDashboard", { replace: true });

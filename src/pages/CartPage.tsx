@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { API_BASE_URL } from '@/config/env';
 
 interface CartItem {
   _id: string;
@@ -53,7 +54,7 @@ const CartPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get("http://localhost:8000/api/v1/cart", {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/cart`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
@@ -88,7 +89,7 @@ const CartPage = () => {
     setRemovingId(itemId);
     try {
       await axios.delete(
-        `http://localhost:8000/api/v1/cart/${itemId}`,
+        `${API_BASE_URL}/api/v1/cart/${itemId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           timeout: 10000,
