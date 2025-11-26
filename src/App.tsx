@@ -25,9 +25,9 @@ import CourseViewPage from "./pages/CourseViewPage";
 const queryClient = new QueryClient();
 
 const ProtectedAdminRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
+  const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-  return isLoggedIn && role === "admin" ? (
+  return token && role === "admin" ? (
     <AdminDashboard />
   ) : (
     <Navigate to="/login" />
@@ -35,9 +35,9 @@ const ProtectedAdminRoute = () => {
 };
 
 const ProtectedInstructorRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
+  const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-  return isLoggedIn && (role === "manager" || role === "instructor") ? (
+  return token && (role === "manager" || role === "instructor") ? (
     <InstructorDashboard />
   ) : (
     <Navigate to="/login" />
@@ -45,35 +45,35 @@ const ProtectedInstructorRoute = () => {
 };
 
 const ProtectedUserRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
-  return isLoggedIn ? <UserDashboard /> : <Navigate to="/login" />;
+  const token = localStorage.getItem("token");
+  return token ? <UserDashboard /> : <Navigate to="/login" />;
 };
 
 const ProtectedOrdersRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
+  const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
-  return isLoggedIn && role === "admin" ? <OrdersList /> : <Navigate to="/login" />;
+  return token && role === "admin" ? <OrdersList /> : <Navigate to="/login" />;
 };
 
 const ProtectedCheckoutRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
-  return isLoggedIn ? <Checkout /> : <Navigate to="/login" />;
+  const token = localStorage.getItem("token");
+  return token ? <Checkout /> : <Navigate to="/login" />;
 };
 
 const ProtectedMyOrdersRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
-  return isLoggedIn ? <MyOrders /> : <Navigate to="/login" />;
+  const token = localStorage.getItem("token");
+  return token ? <MyOrders /> : <Navigate to="/login" />;
 };
 
 const ProtectedOrderDetailsRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
-  return isLoggedIn ? <OrderDetails /> : <Navigate to="/login" />;
+  const token = localStorage.getItem("token");
+  return token ? <OrderDetails /> : <Navigate to="/login" />;
 };
 
 // ✅ حماية صفحة Cart
 const ProtectedCartRoute = () => {
-  const isLoggedIn = localStorage.getItem("isLoggedIn");
-  return isLoggedIn ? <CartPage /> : <Navigate to="/login" />;
+  const token = localStorage.getItem("token");
+  return token ? <CartPage /> : <Navigate to="/login" />;
 };
 
 const App = () => (
@@ -90,7 +90,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-               <Route path="/AdminDashboard" element={<ProtectedAdminRoute />} />
+                <Route path="/AdminDashboard" element={<ProtectedAdminRoute />} />
                 <Route path="/instructordashboard" element={<ProtectedInstructorRoute />} />
                 <Route path="/userdashboard" element={<ProtectedUserRoute />} />
                 <Route path="/courses" element={<Courses />} />
@@ -100,7 +100,7 @@ const App = () => (
                 <Route path="/checkout" element={<ProtectedCheckoutRoute />} />
                 <Route path="/my-orders" element={<ProtectedMyOrdersRoute />} />
                 <Route path="/order/:orderId" element={<ProtectedOrderDetailsRoute />} />
-                 <Route path="/course/:courseId" element={<CourseViewPage />} />
+                <Route path="/course/:courseId" element={<CourseViewPage />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
