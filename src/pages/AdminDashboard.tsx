@@ -119,7 +119,9 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
+    console.log("AdminDashboard useEffect:", { token: !!token });
     if (!token) {
+      console.log("AdminDashboard: No token, redirecting to login");
       navigate("/login");
       return;
     }

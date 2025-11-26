@@ -27,6 +27,7 @@ const queryClient = new QueryClient();
 const ProtectedAdminRoute = () => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
+  console.log("ProtectedAdminRoute:", { token: !!token, role });
   return token && role === "admin" ? (
     <AdminDashboard />
   ) : (
@@ -37,6 +38,7 @@ const ProtectedAdminRoute = () => {
 const ProtectedInstructorRoute = () => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
+  console.log("ProtectedInstructorRoute:", { token: !!token, role });
   return token && (role === "manager" || role === "instructor") ? (
     <InstructorDashboard />
   ) : (
@@ -46,6 +48,7 @@ const ProtectedInstructorRoute = () => {
 
 const ProtectedUserRoute = () => {
   const token = localStorage.getItem("token");
+  console.log("ProtectedUserRoute:", { token: !!token });
   return token ? <UserDashboard /> : <Navigate to="/login" />;
 };
 

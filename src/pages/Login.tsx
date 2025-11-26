@@ -28,8 +28,10 @@ const Login = () => {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
+    console.log("Login useEffect:", { token: !!token, role });
 
     if (token && role) {
+      console.log("Login: Token found, redirecting to dashboard");
       if (role === "admin") navigate("/AdminDashboard", { replace: true });
       else if (role === "manager") navigate("/InstructorDashboard", { replace: true });
       else navigate("/UserDashboard", { replace: true });
