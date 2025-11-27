@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { API_BASE_URL } from '@/config/env';
+import { CurriculumEditor, Section } from "@/components/admin/CurriculumEditor";
 
 interface Course {
   _id?: string;
@@ -14,6 +15,8 @@ interface Course {
   category?: string;
   imageCover?: File | string | null;
   images?: File[] | string[];
+  whatWillYouLearn?: string[];
+  curriculum?: Section[];
 }
 
 interface Props {
@@ -31,6 +34,8 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
     category: "",
     imageCover: null,
     images: [],
+    whatWillYouLearn: [],
+    curriculum: [],
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -47,6 +52,8 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
         category: course.category as string || "",
         imageCover: course.imageCover || null,
         images: course.images || [],
+        whatWillYouLearn: course.whatWillYouLearn || [],
+        curriculum: course.curriculum || [],
       });
     }
   }, [course]);
@@ -85,6 +92,16 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
     fd.append("category", formData.category);
     fd.append("instructor", instructorId || "");
 
+    // Append complex data
+    if (formData.whatWillYouLearn && formData.whatWillYouLearn.length > 0) {
+      const validItems = formData.whatWillYouLearn.filter(item => item.trim() !== "");
+      validItems.forEach(item => fd.append("whatWillYouLearn", item));
+    }
+
+    if (formData.curriculum && formData.curriculum.length > 0) {
+      fd.append("curriculum", JSON.stringify(formData.curriculum));
+    }
+
     if (formData.imageCover instanceof File) fd.append("imageCover", formData.imageCover);
     if (Array.isArray(formData.images)) {
       formData.images.forEach((img) => {
@@ -120,65 +137,105 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-md w-1/2 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl mb-4">{course ? "تعديل الكورس" : "إضافة كورس جديد"}</h2>
-        <div className="grid gap-4">
-          <Input
-            name="title"
-            placeholder="عنوان الكورس"
-            value={formData.title}
-            onChange={handleChange}
+      <div className="bg-white p-6 rounded-md w-3/4 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-2xl mb-4 font-bold text-center">{course ? "تعديل الكورس" : "إضافة كورس جديد"}</h2>
+
+        <div className="grid gap-6">
+          {/* Basic Info Section */}
+          <div className="space-y-4 border p-4 rounded-lg">
+            <h3 className="font-semibold text-lg border-b pb-2">المعلومات الأساسية</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">عنوان الكورس</label>
+                <Input
+                  name="title"
+                  placeholder="عنوان الكورس"
+                  value={formData.title}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">السعر</label>
+                <Input
+                  name="price"
+                  type="number"
+                  placeholder="السعر"
+                  value={formData.price}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">الكمية</label>
+                <Input
+                  name="quantity"
+                  type="number"
+                  placeholder="الكمية"
+                  value={formData.quantity || 1}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">الفئة (ID)</label>
+                <Input
+                  name="category"
+                  placeholder="معرّف الفئة (ObjectId)"
+                  value={formData.category || ""}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1 block">الوصف</label>
+              <textarea
+                name="description"
+                placeholder="وصف الكورس"
+                value={formData.description}
+                onChange={handleChange}
+                className="w-full border p-2 rounded min-h-[100px]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">صورة الغلاف</label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e, "imageCover")}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">صور إضافية</label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleFileChange(e, "images")}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Curriculum Editor Section */}
+          <CurriculumEditor
+            whatWillYouLearn={formData.whatWillYouLearn || []}
+            setWhatWillYouLearn={(items) => setFormData({ ...formData, whatWillYouLearn: items })}
+            curriculum={formData.curriculum || []}
+            setCurriculum={(sections) => setFormData({ ...formData, curriculum: sections })}
           />
-          <textarea
-            name="description"
-            placeholder="وصف الكورس"
-            value={formData.description}
-            onChange={handleChange}
-            className="border p-2 rounded"
-          />
-          <Input
-            name="price"
-            type="number"
-            placeholder="السعر"
-            value={formData.price}
-            onChange={handleChange}
-          />
-          <Input
-            name="quantity"
-            type="number"
-            placeholder="الكمية"
-            value={formData.quantity || 1}
-            onChange={handleChange}
-          />
-          <Input
-            name="category"
-            placeholder="معرّف الفئة (ObjectId)"
-            value={formData.category || ""}
-            onChange={handleChange}
-          />
-          <label className="text-sm">صورة الغلاف</label>
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleFileChange(e, "imageCover")}
-          />
-          <label className="text-sm">صور إضافية</label>
-          <Input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => handleFileChange(e, "images")}
-          />
-          <div className="flex justify-end gap-2 mt-4">
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 mt-4 sticky bottom-0 bg-white p-4 border-t">
             <Button
-              className="bg-gray-500 text-white"
+              variant="outline"
               onClick={closeModal}
               disabled={loading}
             >
               إلغاء
             </Button>
             <Button
-              className="bg-green-500 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white"
               onClick={handleSubmit}
               disabled={loading}
             >

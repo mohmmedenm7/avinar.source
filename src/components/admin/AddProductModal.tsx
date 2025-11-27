@@ -1,12 +1,15 @@
-﻿import React, { useState } from "react";
+﻿
+import React, { useState } from "react";
 import { Upload, X, Play, CheckCircle2 } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
+import { QuizEditor, QuizData } from "./QuizEditor";
+import { CurriculumEditor, Section } from "./CurriculumEditor";
 
-export const AddProductModal = ({ 
-  show = true, 
-  onClose = () => {}, 
-  token = "demo-token", 
-  fetchProducts = () => {} 
+export const AddProductModal = ({
+  show = true,
+  onClose = () => { },
+  token = "demo-token",
+  fetchProducts = () => { }
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -17,6 +20,17 @@ export const AddProductModal = ({
   const [imagePreview, setImagePreview] = useState(null);
   const [videoName, setVideoName] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Curriculum State
+  const [whatWillYouLearn, setWhatWillYouLearn] = useState<string[]>([]);
+  const [curriculum, setCurriculum] = useState<Section[]>([]);
+
+  // Quiz State
+  const [quizData, setQuizData] = useState<QuizData>({
+    title: "",
+    questions: [],
+  });
+  const [showQuizEditor, setShowQuizEditor] = useState(false);
 
   if (!show) return null;
 
@@ -47,31 +61,45 @@ export const AddProductModal = ({
       showToast("العنوان يجب أن يكون 3 أحرف على الأقل", "destructive");
       return;
     }
-    
+
     if (!description || description.length < 20) {
       showToast("الوصف يجب أن يكون 20 حرف على الأقل", "destructive");
       return;
     }
-    
+
     if (!price || parseFloat(price) <= 0) {
       showToast("أدخل سعر صحيح", "destructive");
       return;
     }
-    
+
     if (!imageCover) {
       showToast("يرجى اختيار صورة الغلاف", "destructive");
       return;
     }
-    
+
     if (!video) {
       showToast("يرجى اختيار فيديو", "destructive");
       return;
     }
 
+    // Validate Quiz if enabled
+    if (showQuizEditor && quizData.title) {
+      if (quizData.questions.length === 0) {
+        showToast("يرجى إضافة سؤال واحد على الأقل للاختبار", "destructive");
+        return;
+      }
+      for (const q of quizData.questions) {
+        if (!q.question || !q.correctAnswer) {
+          showToast("يرجى إكمال جميع بيانات الأسئلة", "destructive");
+          return;
+        }
+      }
+    }
+
     setAddingProduct(true);
     try {
       const slug = title.toLowerCase().trim().replace(/\s+/g, '-');
-      
+
       const fd = new FormData();
       fd.append("title", title.trim());
       fd.append("slug", slug);
@@ -79,32 +107,75 @@ export const AddProductModal = ({
       fd.append("quantity", "1");
       fd.append("price", price);
       fd.append("category", "691f6bd063a0a3709983d118");
-      // جرّب أسماء مختلفة للملفات
       fd.append("imageCover", imageCover);
-      fd.append("videos", video); // جرّب "videos" بدل "video"
+      fd.append("videos", video);
 
+      // Append curriculum data
+      if (whatWillYouLearn.length > 0) {
+        const validItems = whatWillYouLearn.filter(item => item.trim() !== "");
+        validItems.forEach(item => fd.append("whatWillYouLearn", item));
+      }
+
+      // Append curriculum data as flattened keys for backend parsing
+      if (curriculum.length > 0) {
+        curriculum.forEach((section, sIndex) => {
+          fd.append(`curriculum[${sIndex}][title]`, section.title);
+          section.lectures.forEach((lecture, lIndex) => {
+            fd.append(`curriculum[${sIndex}][lectures][${lIndex}][title]`, lecture.title);
+            fd.append(`curriculum[${sIndex}][lectures][${lIndex}][video]`, lecture.video);
+            fd.append(`curriculum[${sIndex}][lectures][${lIndex}][description]`, lecture.description);
+            fd.append(`curriculum[${sIndex}][lectures][${lIndex}][duration]`, lecture.duration.toString());
+          });
+        });
+      }
+
+      // 1. Create Product
       const response = await fetch(`${API_BASE_URL}/api/v1/products`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token} `,
         },
         body: fd,
       });
 
       if (!response.ok) {
-        try {
-          const errorData = await response.json();
-          console.error('Backend Error:', errorData);
-          throw new Error(errorData.message || errorData.error || `خطأ: ${response.status}`);
-        } catch (e) {
-          const text = await response.text();
-          console.error('Server Response:', text);
-          throw new Error(`فشل إضافة الكورس: ${response.status}`);
-        }
+        const errorData = await response.json();
+        throw new Error(errorData.message || `خطأ: ${response.status} `);
       }
 
-      showToast("✅ تم إضافة الكورس بنجاح");
-      
+      const productData = await response.json();
+      const newProductId = productData.data._id; // Adjust based on actual API response structure
+
+      // 2. Create Quiz if exists
+      if (showQuizEditor && quizData.title && newProductId) {
+        const quizPayload = {
+          title: quizData.title,
+          product: newProductId,
+          questions: quizData.questions,
+          // createdBy is usually handled by backend from token, but sending if needed
+        };
+
+        const quizRes = await fetch(`${API_BASE_URL} /api/v1 / quizzes`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token} `,
+          },
+          body: JSON.stringify(quizPayload),
+        });
+
+        if (!quizRes.ok) {
+          console.error("Failed to create quiz", await quizRes.text());
+          showToast("تم إضافة الكورس ولكن فشل إضافة الاختبار", "destructive");
+          // We don't return here, we still consider the product added
+        } else {
+          showToast("✅ تم إضافة الكورس والاختبار بنجاح", "success");
+        }
+      } else {
+        showToast("✅ تم إضافة الكورس بنجاح", "success");
+      }
+
+      // Reset Form
       setTitle("");
       setDescription("");
       setPrice("");
@@ -112,7 +183,11 @@ export const AddProductModal = ({
       setImagePreview(null);
       setVideo(null);
       setVideoName(null);
-      
+      setWhatWillYouLearn([]);
+      setCurriculum([]);
+      setQuizData({ title: "", questions: [] });
+      setShowQuizEditor(false);
+
       fetchProducts();
       setTimeout(() => onClose(), 1500);
     } catch (err) {
@@ -124,20 +199,19 @@ export const AddProductModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto bg-white rounded-lg">
+      <div className="w-full max-w-3xl p-6 shadow-xl max-h-[90vh] overflow-y-auto bg-white rounded-lg">
         {/* Toast Notification */}
         {toast && (
-          <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-[60] flex items-center gap-2 ${
-            toast.variant === "destructive" ? "bg-red-500 text-white" : "bg-green-500 text-white"
-          }`}>
+          <div className={`fixed top - 4 left - 1 / 2 transform - translate - x - 1 / 2 px - 6 py - 3 rounded - lg shadow - lg z - [60] flex items - center gap - 2 ${toast.variant === "destructive" ? "bg-red-500 text-white" : "bg-green-500 text-white"
+            } `}>
             {toast.variant !== "destructive" && <CheckCircle2 size={20} />}
             <span className="font-medium">{toast.title}</span>
           </div>
         )}
 
         <div className="flex justify-between items-center mb-6">
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-500 hover:text-gray-700 transition"
             type="button"
           >
@@ -151,21 +225,21 @@ export const AddProductModal = ({
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               عنوان الكورس <span className="text-red-500">*</span>
             </label>
-            <input 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              placeholder="أدخل عنوان الكورس" 
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="أدخل عنوان الكورس"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">الوصف</label>
-            <textarea 
-              value={description} 
+            <textarea
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="أدخل وصف الكورس" 
-              className="w-full border border-gray-300 rounded-lg p-3 text-right text-sm resize-none focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" 
+              placeholder="أدخل وصف الكورس"
+              className="w-full border border-gray-300 rounded-lg p-3 text-right text-sm resize-none focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
               rows={4}
             />
           </div>
@@ -174,11 +248,11 @@ export const AddProductModal = ({
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               السعر <span className="text-red-500">*</span>
             </label>
-            <input 
-              type="number" 
-              value={price} 
-              onChange={(e) => setPrice(e.target.value)} 
-              placeholder="0.00" 
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
               step="0.01"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
@@ -189,20 +263,20 @@ export const AddProductModal = ({
               صورة الغلاف <span className="text-red-500">*</span>
             </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition">
-              <input 
-                type="file" 
-                accept="image/*" 
+              <input
+                type="file"
+                accept="image/*"
                 onChange={handleImageChange}
-                className="hidden" 
+                className="hidden"
                 id="image-input"
               />
               <label htmlFor="image-input" className="cursor-pointer block">
                 {imagePreview ? (
                   <div className="relative inline-block">
-                    <img 
-                      src={imagePreview} 
-                      alt="preview" 
-                      className="w-32 h-32 mx-auto object-cover rounded-lg border-2 border-gray-200" 
+                    <img
+                      src={imagePreview}
+                      alt="preview"
+                      className="w-32 h-32 mx-auto object-cover rounded-lg border-2 border-gray-200"
                     />
                     <p className="text-xs text-green-600 mt-2 font-medium">✓ تم اختيار الصورة</p>
                   </div>
@@ -221,9 +295,9 @@ export const AddProductModal = ({
               الفيديو <span className="text-red-500">*</span>
             </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition">
-              <input 
-                type="file" 
-                accept="video/*" 
+              <input
+                type="file"
+                accept="video/*"
                 onChange={handleVideoChange}
                 className="hidden"
                 id="video-input"
@@ -244,17 +318,44 @@ export const AddProductModal = ({
             </div>
           </div>
 
+          {/* Curriculum Section */}
+          <div className="pt-4 border-t">
+            <CurriculumEditor
+              whatWillYouLearn={whatWillYouLearn}
+              setWhatWillYouLearn={setWhatWillYouLearn}
+              curriculum={curriculum}
+              setCurriculum={setCurriculum}
+            />
+          </div>
+
+          {/* Quiz Toggle */}
+          <div className="pt-4 border-t">
+            <label className="flex items-center gap-2 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={showQuizEditor}
+                onChange={(e) => setShowQuizEditor(e.target.checked)}
+                className="w-5 h-5 rounded text-blue-600"
+              />
+              <span className="font-semibold text-gray-700">إضافة اختبار للكورس</span>
+            </label>
+
+            {showQuizEditor && (
+              <QuizEditor quizData={quizData} setQuizData={setQuizData} />
+            )}
+          </div>
+
           <div className="flex justify-start gap-3 pt-4 border-t border-gray-200">
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={addingProduct}
             >
               إلغاء
             </button>
-            <button 
-              onClick={handleAddProduct} 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition disabled:bg-blue-400 disabled:cursor-not-allowed" 
+            <button
+              onClick={handleAddProduct}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition disabled:bg-blue-400 disabled:cursor-not-allowed"
               disabled={addingProduct}
             >
               {addingProduct ? "جاري الإضافة..." : "إضافة الكورس"}

@@ -1,12 +1,18 @@
 ﻿import { useState, useEffect } from "react";
-import { ArrowRight, Play, Users, Clock } from "lucide-react";
+import { ArrowRight, Play, Users, Clock, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
+import { getImageUrl } from "@/utils/imageUtils";
 
-interface Lesson {
-  _id: string;
+interface Lecture {
   title: string;
-  duration?: string;
-  videoUrl?: string;
+  video: string;
+  description: string;
+  duration: number;
+}
+
+interface Section {
+  title: string;
+  lectures: Lecture[];
 }
 
 interface Course {
@@ -15,16 +21,17 @@ interface Course {
   description: string;
   price: number;
   imageCover?: string;
-  lessons?: Lesson[];
+  curriculum?: Section[];
+  whatWillYouLearn?: string[];
   instructor?: string;
   studentsCount?: number;
-  totalHours?: number;
 }
 
 const CourseViewPage = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set([0]));
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   const [isPaid, setIsPaid] = useState<boolean>(false);
 
@@ -42,7 +49,7 @@ const CourseViewPage = () => {
   const fetchPaymentStatus = async () => {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/v1/cart/status/${email}/product/${productId}`,
+        `${API_BASE_URL}/api/v1/cart/status/${email}/product/${courseId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -51,8 +58,14 @@ const CourseViewPage = () => {
       );
 
       const data = await res.json();
-      setIsPaid(data?.isPaid === true);
+      // التحقق من البنية الصحيحة للاستجابة
+      if (data?.status === "success" && data?.data) {
+        setIsPaid(data.data.isPaid === true);
+      } else {
+        setIsPaid(false);
+      }
     } catch (err) {
+      console.error("خطأ في جلب حالة الدفع:", err);
       setIsPaid(false);
     }
   };
@@ -75,8 +88,9 @@ const CourseViewPage = () => {
         const courseData = data?.data;
         setCourse(courseData);
 
-        if (courseData?.lessons?.[0]) {
-          setSelectedLesson(courseData.lessons[0]);
+        // Select first lecture from first section
+        if (courseData?.curriculum?.[0]?.lectures?.[0]) {
+          setSelectedLecture(courseData.curriculum[0].lectures[0]);
         }
       } catch (err) {
         showToast("خطأ في جلب الكورس", "error");
@@ -95,6 +109,23 @@ const CourseViewPage = () => {
       3000
     );
   };
+
+  const toggleSection = (index: number) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  // Calculate total lectures and duration
+  const totalLectures = course?.curriculum?.reduce((sum, section) => sum + section.lectures.length, 0) || 0;
+  const totalDuration = course?.curriculum?.reduce(
+    (sum, section) => sum + section.lectures.reduce((s, l) => s + (l.duration || 0), 0),
+    0
+  ) || 0;
 
   if (loading) {
     return (
@@ -139,9 +170,8 @@ const CourseViewPage = () => {
       {/* Toast */}
       {toast.show && (
         <div
-          className={`fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${
-            toast.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+            }`}
         >
           {toast.message}
         </div>
@@ -162,17 +192,20 @@ const CourseViewPage = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <div className="md:col-span-2">
-            <div className="bg-white rounded-lg overflow-hidden shadow-md mb-6">
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Left Column - Course Info */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Course Image */}
+            <div className="bg-white rounded-lg overflow-hidden shadow-md">
               <img
-                src={course.imageCover || "/placeholder-course.png"}
+                src={getImageUrl(course.imageCover)}
                 alt={course.title}
                 className="w-full h-96 object-cover"
               />
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
+            {/* Course Details */}
+            <div className="bg-white rounded-lg shadow p-6">
               <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
               <p className="text-gray-700 text-lg leading-relaxed mb-6">
                 {course.description}
@@ -189,63 +222,124 @@ const CourseViewPage = () => {
                 <div className="flex items-center gap-3">
                   <Clock size={24} className="text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">الساعات</p>
-                    <p className="font-bold">{course.totalHours || 0}</p>
+                    <p className="text-sm text-gray-600">الدقائق</p>
+                    <p className="font-bold">{totalDuration}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Play size={24} className="text-blue-600" />
                   <div>
-                    <p className="text-sm text-gray-600">الدروس</p>
-                    <p className="font-bold">{course.lessons?.length || 0}</p>
+                    <p className="text-sm text-gray-600">المحاضرات</p>
+                    <p className="font-bold">{totalLectures}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Lessons */}
-            {course.lessons && course.lessons.length > 0 && (
+            {/* What Will You Learn */}
+            {course.whatWillYouLearn && course.whatWillYouLearn.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-2xl font-bold mb-4">ماذا ستتعلم؟</h2>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {course.whatWillYouLearn.map((item, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <CheckCircle size={20} className="text-green-600 flex-shrink-0 mt-1" />
+                      <p className="text-gray-700">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Curriculum */}
+            {course.curriculum && course.curriculum.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-2xl font-bold mb-4">محتوى الكورس</h2>
-                <div className="space-y-2">
-                  {course.lessons.map((lesson) => (
-                    <button
-                      key={lesson._id}
-                      onClick={() => setSelectedLesson(lesson)}
-                      className={`w-full p-4 text-right rounded-lg border-2 transition-all ${
-                        selectedLesson?._id === lesson._id
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-gray-200 hover:border-blue-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Play size={18} className="text-blue-600 flex-shrink-0" />
-                        <div className="flex-grow">
-                          <p className="font-semibold">{lesson.title}</p>
-                          {lesson.duration && (
-                            <p className="text-sm text-gray-500">
-                              المدة: {lesson.duration}
-                            </p>
+                <div className="space-y-3">
+                  {course.curriculum.map((section, sectionIndex) => (
+                    <div key={sectionIndex} className="border rounded-lg overflow-hidden">
+                      {/* Section Header */}
+                      <button
+                        onClick={() => toggleSection(sectionIndex)}
+                        className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          {expandedSections.has(sectionIndex) ? (
+                            <ChevronUp size={20} className="text-blue-600" />
+                          ) : (
+                            <ChevronDown size={20} className="text-blue-600" />
                           )}
+                          <h3 className="font-bold text-lg">{section.title}</h3>
+                          <span className="text-sm text-gray-500">
+                            ({section.lectures.length} محاضرة)
+                          </span>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+
+                      {/* Lectures List */}
+                      {expandedSections.has(sectionIndex) && (
+                        <div className="divide-y">
+                          {section.lectures.map((lecture, lectureIndex) => (
+                            <button
+                              key={lectureIndex}
+                              onClick={() => setSelectedLecture(lecture)}
+                              className={`w-full p-4 text-right hover:bg-blue-50 transition-all ${selectedLecture === lecture
+                                ? "bg-blue-100 border-r-4 border-blue-600"
+                                : ""
+                                }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <Play size={18} className="text-blue-600 flex-shrink-0 mt-1" />
+                                <div className="flex-grow text-right">
+                                  <p className="font-semibold">{lecture.title}</p>
+                                  {lecture.description && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {lecture.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                                    <span className="flex items-center gap-1">
+                                      <Clock size={14} />
+                                      {lecture.duration} دقيقة
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Video */}
-          <div className="bg-black rounded-lg overflow-hidden shadow-lg h-fit">
-            {selectedLesson?.videoUrl && (
-              <video
-                src={selectedLesson.videoUrl}
-                controls
-                className="w-full"
-                style={{ maxHeight: "600px" }}
-              />
-            )}
+          {/* Right Column - Video Player */}
+          <div className="md:col-span-1">
+            <div className="bg-black rounded-lg overflow-hidden shadow-lg sticky top-24">
+              {selectedLecture?.video ? (
+                <div>
+                  <video
+                    src={selectedLecture.video}
+                    controls
+                    className="w-full"
+                    style={{ maxHeight: "400px" }}
+                  />
+                  <div className="bg-white p-4">
+                    <h3 className="font-bold text-lg mb-2">{selectedLecture.title}</h3>
+                    {selectedLecture.description && (
+                      <p className="text-gray-600 text-sm">{selectedLecture.description}</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="aspect-video bg-gray-800 flex items-center justify-center">
+                  <p className="text-gray-400">اختر محاضرة لبدء المشاهدة</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

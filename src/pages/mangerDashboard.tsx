@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { BookOpen, LogOut, Plus, Edit2, Trash2, Users, DollarSign } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
+import { getImageUrl } from "@/utils/imageUtils";
 
 interface Course {
   _id: string;
@@ -249,18 +250,16 @@ export default function InstructorDashboard() {
           {statsCards.map((stat, idx) => (
             <div
               key={idx}
-              className={`rounded-2xl border transition-all duration-300 ${
-                stat.icon === "dollar-sign"
+              className={`rounded-2xl border transition-all duration-300 ${stat.icon === "dollar-sign"
                   ? "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-300 hover:border-slate-400 hover:shadow-xl"
                   : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-md"
-              }`}
+                }`}
             >
               <div className="p-8">
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    <p className={`text-sm font-semibold mb-2 ${
-                      stat.icon === "dollar-sign" ? "text-slate-500" : "text-gray-500"
-                    }`}>
+                    <p className={`text-sm font-semibold mb-2 ${stat.icon === "dollar-sign" ? "text-slate-500" : "text-gray-500"
+                      }`}>
                       {stat.label}
                     </p>
                     <p className="text-4xl font-bold text-slate-700 mb-1">
@@ -293,11 +292,10 @@ export default function InstructorDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 font-medium text-base transition-all duration-200 border-b-2 ${
-                  activeTab === tab.id
+                className={`px-6 py-4 font-medium text-base transition-all duration-200 border-b-2 ${activeTab === tab.id
                     ? "text-gray-900 border-gray-900"
                     : "text-gray-700 border-transparent hover:text-gray-900 hover:bg-gray-50"
-                }`}
+                  }`}
               >
                 {tab.id === "add" && <Plus size={18} className="inline mr-2" />}
                 {tab.id === "edit" && <Edit2 size={18} className="inline mr-2" />}
@@ -325,7 +323,7 @@ export default function InstructorDashboard() {
                     {courses.map((course) => (
                       <div key={course._id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
                         {course.imageCover && (
-                          <img src={course.imageCover} alt={course.title} className="w-full h-40 object-cover" />
+                          <img src={getImageUrl(course.imageCover)} alt={course.title} className="w-full h-40 object-cover" />
                         )}
                         <div className="p-4">
                           <h3 className="text-lg font-bold text-gray-900 mb-2">{course.title}</h3>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { API_BASE_URL } from '@/config/env';
+import { getImageUrl } from "@/utils/imageUtils";
 
 
 
@@ -29,7 +30,7 @@ const CoursesPage = () => {
   // دالة لجلب حالة الدفع لكورس معين
   const fetchPaymentStatus = async (productId: string): Promise<boolean> => {
     if (!email || !token) return false;
- 
+
     try {
       const res = await axios.get(
         `${API_BASE_URL}/api/v1/cart/status/${email}/product/${productId}`,
@@ -107,44 +108,44 @@ const CoursesPage = () => {
       {loading && <p className="text-center">جاري التحميل...</p>}
 
       <div className="grid md:grid-cols-3 gap-8">
-       {courses.map((course) => {
-  const isPaid = course.isPaid === true;
+        {courses.map((course) => {
+          const isPaid = course.isPaid === true;
 
-  return (
-    <Card key={course._id} className="flex flex-col">
-      <CardHeader className="p-0">
-        <img
-          src={course.imageCover || "/placeholder-course.png"}
-          alt={course.title}
-          className="w-full h-48 object-cover"
-        />
-      </CardHeader>
+          return (
+            <Card key={course._id} className="flex flex-col">
+              <CardHeader className="p-0">
+                <img
+                  src={getImageUrl(course.imageCover)}
+                  alt={course.title}
+                  className="w-full h-48 object-cover"
+                />
+              </CardHeader>
 
-      <CardContent className="flex flex-col flex-grow">
-        <CardTitle className="text-right">{course.title}</CardTitle>
-        <p className="text-right text-gray-600 mb-4 text-sm">{course.description}</p>
-        <p className="text-right font-bold text-gray-600 mb-2">${course.price}</p>
+              <CardContent className="flex flex-col flex-grow">
+                <CardTitle className="text-right">{course.title}</CardTitle>
+                <p className="text-right text-gray-600 mb-4 text-sm">{course.description}</p>
+                <p className="text-right font-bold text-gray-600 mb-2">${course.price}</p>
 
-     {isPaid ? (
-  <Button
-    onClick={() => navigate(`/course/${course._id}`)}
-    className="w-full bg-green-600 hover:bg-green-700"
-  >
-    تم الدفع - عرض الكورس
-  </Button>
-) : (
-  <Button
-    onClick={() => handleAddToCart(course._id)}
-    className="w-full bg-blue-600 hover:bg-blue-700"
-  >
-    أضف للسلة
-  </Button>
-)}
+                {isPaid ? (
+                  <Button
+                    onClick={() => navigate(`/course/${course._id}`)}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    تم الدفع - عرض الكورس
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleAddToCart(course._id)}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    أضف للسلة
+                  </Button>
+                )}
 
-      </CardContent>
-    </Card>
-  );
-})}
+              </CardContent>
+            </Card>
+          );
+        })}
 
       </div>
 
