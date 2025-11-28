@@ -44,6 +44,8 @@ const CheckoutPage = () => {
     postalCode: "",
     country: "Sudan",
   });
+  const [paymentReceipt, setPaymentReceipt] = useState<File | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "stripe">("cash");
 
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
@@ -72,7 +74,7 @@ const CheckoutPage = () => {
       });
 
       const cartData = res.data?.data;
-      
+
       if (!cartData?._id || !cartData?.cartItems?.length) {
         throw new Error("السلة فارغة");
       }
@@ -92,6 +94,12 @@ const CheckoutPage = () => {
     setShippingAddress((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPaymentReceipt(e.target.files[0]);
+    }
+  };
+
   // ✅ Validation قبل الإرسال
   const validateForm = (): boolean => {
     if (!shippingAddress.details.trim()) {
@@ -104,6 +112,10 @@ const CheckoutPage = () => {
     }
     if (!shippingAddress.city.trim()) {
       toast({ title: "يرجى إدخال المدينة" });
+      return false;
+    }
+    if (paymentMethod === "cash" && !paymentReceipt) {
+      toast({ title: "يرجى إرفاق إشعار الدفع للطلب النقدي" });
       return false;
     }
     return true;
@@ -120,20 +132,47 @@ const CheckoutPage = () => {
 
     setSubmitting(true);
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/api/v1/orders/${safeCartId}`,
-        { shippingAddress },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 15000,
+      if (paymentMethod === "stripe") {
+        // Stripe Checkout
+        const res = await axios.get(
+          `${API_BASE_URL}/api/v1/orders/checkout-session/${safeCartId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.data.session?.url) {
+          window.location.href = res.data.session.url;
+        } else {
+          toast({ title: "فشل إنشاء جلسة الدفع", variant: "destructive" });
         }
-      );
+      } else {
+        // Cash Order with Receipt
+        const formData = new FormData();
+        formData.append("shippingAddress[details]", shippingAddress.details);
+        formData.append("shippingAddress[phone]", shippingAddress.phone);
+        formData.append("shippingAddress[city]", shippingAddress.city);
+        formData.append("shippingAddress[postalCode]", shippingAddress.postalCode || "");
+        formData.append("shippingAddress[country]", shippingAddress.country || "");
+        if (paymentReceipt) {
+          formData.append("paymentReceipt", paymentReceipt);
+        }
 
-      const orderId = res.data?.data?._id;
-      if (!orderId) throw new Error("لم يتم استرجاع معرف الطلب");
+        const res = await axios.post(
+          `${API_BASE_URL}/api/v1/orders/${safeCartId}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+            timeout: 30000, // Increased timeout for file upload
+          }
+        );
 
-      toast({ title: "✓ تم إنشاء الطلب بنجاح" });
-      navigate(`/order/${orderId}`);
+        const orderId = res.data?.data?._id;
+        if (!orderId) throw new Error("لم يتم استرجاع معرف الطلب");
+
+        toast({ title: "✓ تم إنشاء الطلب بنجاح" });
+        navigate(`/order/${orderId}`);
+      }
     } catch (err: any) {
       const errorMsg =
         err.response?.data?.message || err.message || "فشل إنشاء الطلب";
@@ -295,12 +334,53 @@ const CheckoutPage = () => {
                     />
                   </div>
 
+                  <div className="border-t pt-4 mt-4">
+                    <label className="block text-sm font-semibold mb-2">
+                      طريقة الدفع
+                    </label>
+                    <div className="flex gap-4 mb-4">
+                      <Button
+                        type="button"
+                        variant={paymentMethod === "cash" ? "default" : "outline"}
+                        onClick={() => setPaymentMethod("cash")}
+                        className="flex-1"
+                      >
+                        تحويل بنكي / كاش
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentMethod === "stripe" ? "default" : "outline"}
+                        onClick={() => setPaymentMethod("stripe")}
+                        className="flex-1"
+                      >
+                        Stripe (بطاقة)
+                      </Button>
+                    </div>
+
+                    {paymentMethod === "cash" && (
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                        <label className="block text-sm font-semibold mb-2 text-blue-800">
+                          صورة إشعار التحويل *
+                        </label>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="bg-white"
+                        />
+                        <p className="text-xs text-blue-600 mt-2">
+                          يرجى إرفاق صورة واضحة لإيصال التحويل البنكي لإتمام الطلب.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white text-lg py-6 disabled:opacity-50"
                     disabled={submitting}
                   >
-                    {submitting ? "جاري..." : `✓ تأكيد الطلب (${safeTotalPrice.toFixed(2)}$)`}
+                    {submitting ? "جاري..." : paymentMethod === "stripe" ? "الذهاب للدفع" : `✓ تأكيد الطلب (${safeTotalPrice.toFixed(2)}$)`}
                   </Button>
                 </form>
               </CardContent>

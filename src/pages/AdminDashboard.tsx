@@ -105,11 +105,13 @@ const AdminDashboard = () => {
     setLoadingOrders(true);
     setErrorOrders(null);
     try {
+      console.log("Fetching orders from:", `${API_BASE_URL}/api/v1/orders`);
       const res = await axios.get(`${API_BASE_URL}/api/v1/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(res.data?.data || []);
     } catch (err: any) {
+      console.error("Error fetching orders:", err);
       const msg = err.response?.data?.message || "فشل تحميل الطلبات";
       setErrorOrders(msg);
       toast({ title: msg, variant: "destructive" });
@@ -179,7 +181,7 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">

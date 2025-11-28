@@ -29,6 +29,7 @@ const Index = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [visitorCount, setVisitorCount] = useState(0);
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +37,7 @@ const Index = () => {
     const fetchCourses = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/api/v1/products`);
-        setCourses(res.data?.data?.slice(0, 3) || []);
+        setCourses(res.data?.data?.slice(0, 6) || []);
       } catch (error) {
         console.error("Failed to fetch courses:", error);
       } finally {
@@ -44,7 +45,17 @@ const Index = () => {
       }
     };
 
+    const fetchVisitors = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/visitors/all`);
+        setVisitorCount(res.data?.data?.length || 0);
+      } catch (error) {
+        console.error("Failed to fetch visitors:", error);
+      }
+    };
+
     fetchCourses();
+    fetchVisitors();
 
     const handleMouseMove = (e: MouseEvent) => {
       if (heroRef.current) {
@@ -60,7 +71,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6] text-gray-900 font-sans selection:bg-orange-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[#F3F4F6] text-gray-900 font-sans selection:bg-sky-500/30 overflow-x-hidden">
 
       {/* Hero Section */}
       <header
@@ -69,7 +80,7 @@ const Index = () => {
       >
         {/* Interactive Glow Effects (Light Mode) */}
         <div
-          className="absolute top-0 left-1/2 w-[800px] h-[800px] bg-orange-200/40 rounded-full blur-[120px] -z-10 pointer-events-none transition-transform duration-100 ease-out will-change-transform"
+          className="absolute top-0 left-1/2 w-[800px] h-[800px] bg-sky-200/40 rounded-full blur-[120px] -z-10 pointer-events-none transition-transform duration-100 ease-out will-change-transform"
           style={{
             transform: `translate(calc(-50% + ${mousePosition.x * -50}px), ${mousePosition.y * -50}px)`
           }}
@@ -94,7 +105,7 @@ const Index = () => {
             }}
           >
             Think faster with <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-orange-600">AVinar Labs</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-sky-600">AVinar.source</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-gray-600 text-lg md:text-xl mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both delay-200">
@@ -105,7 +116,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both delay-300">
             <Button
               size="lg"
-              className="bg-orange-500 text-white hover:bg-orange-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-orange-500/20"
+              className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-sky-500/20"
               onClick={() => navigate("/register")}
             >
               Get Started Free
@@ -127,7 +138,7 @@ const Index = () => {
               transform: `rotateX(${mousePosition.y * 5}deg) rotateY(${mousePosition.x * 5}deg)`
             }}
           >
-            <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-blue-500 rounded-2xl blur opacity-20 animate-pulse"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-500 rounded-2xl blur opacity-20 animate-pulse"></div>
             <div className="relative bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-2 shadow-2xl transform transition-transform duration-200">
               <img
                 src="https://ui-avatars.com/api/?name=Dashboard&background=f3f4f6&color=333&size=800&length=1&font-size=0.1"
@@ -164,11 +175,11 @@ const Index = () => {
             ].map((feature, idx) => (
               <div
                 key={idx}
-                className="p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-orange-200 transition-all duration-300 group hover:-translate-y-2 hover:bg-white hover:shadow-xl"
+                className="p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-sky-200 transition-all duration-300 group hover:-translate-y-2 hover:bg-white hover:shadow-xl"
                 style={{ animationDelay: `${idx * 100}ms` }}
               >
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="text-orange-500" size={24} />
+                <div className="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <feature.icon className="text-sky-500" size={24} />
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-gray-900">{feature.title}</h3>
                 <p className="text-gray-500 text-sm">{feature.desc}</p>
@@ -188,21 +199,21 @@ const Index = () => {
               <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">Featured Courses</h2>
               <p className="text-gray-500">Explore our most popular learning paths.</p>
             </div>
-            <Link to="/courses" className="hidden md:flex items-center gap-2 text-orange-500 hover:text-orange-600 transition-colors group font-medium">
+            <Link to="/courses" className="hidden md:flex items-center gap-2 text-sky-500 hover:text-sky-600 transition-colors group font-medium">
               View All Courses <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
           {loading ? (
             <div className="flex justify-center py-20">
-              <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <div className="grid md:grid-cols-3 gap-8">
               {courses.map((course, idx) => (
                 <div
                   key={course._id}
-                  className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-orange-200 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+                  className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-sky-200 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
                   style={{ animationDelay: `${idx * 150}ms` }}
                 >
                   <div className="aspect-video bg-gray-100 relative overflow-hidden">
@@ -230,12 +241,12 @@ const Index = () => {
 
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <span className="text-xs font-bold text-orange-600 uppercase tracking-wider bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                      <span className="text-xs font-bold text-sky-600 uppercase tracking-wider bg-sky-50 px-2 py-1 rounded border border-sky-100">
                         {course.category?.name || "Course"}
                       </span>
                       <span className="text-gray-900 font-bold bg-gray-100 px-2 py-1 rounded">${course.price}</span>
                     </div>
-                    <h3 className="text-xl font-bold mb-2 line-clamp-1 group-hover:text-orange-500 transition-colors text-gray-900">{course.title}</h3>
+                    <h3 className="text-xl font-bold mb-2 line-clamp-1 group-hover:text-sky-500 transition-colors text-gray-900">{course.title}</h3>
                     <p className="text-gray-500 text-sm line-clamp-2 mb-4">{course.description}</p>
 
                     <div className="flex items-center gap-2 text-sm text-gray-400 border-t border-gray-100 pt-4">
@@ -249,54 +260,112 @@ const Index = () => {
           )}
 
           <div className="mt-8 text-center md:hidden">
-            <Link to="/courses" className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-600 transition-colors font-medium">
+            <Link to="/courses" className="inline-flex items-center gap-2 text-sky-500 hover:text-sky-600 transition-colors font-medium">
               View All Courses <ArrowRight size={18} />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-24 px-6 bg-white border-y border-gray-200">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 text-gray-900">Loved by learners</h2>
+      {/* Partner Companies Section */}
+      <section className="py-20 px-6 bg-white border-y border-gray-200 overflow-hidden">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
+              شركاؤنا في النجاح
+            </h2>
+            <p className="text-gray-600 text-lg">
+              نفخر بالتعاون مع أفضل الشركات والمؤسسات التعليمية
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-2 gap-8 text-left">
-            <div className="p-8 rounded-2xl bg-gray-50 border border-gray-100 relative hover:border-orange-200 transition-colors group hover:shadow-lg hover:bg-white">
-              <MessageSquare className="absolute -top-4 -right-4 text-orange-500 bg-white p-2 rounded-lg border border-gray-100 group-hover:scale-110 transition-transform shadow-sm" size={40} />
-              <p className="text-gray-600 mb-6 text-lg leading-relaxed">"The quality of content on AVinar is unmatched. I've learned more in 3 months here than I did in 2 years of traditional schooling."</p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-400 rounded-full"></div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Alex Morgan</h4>
-                  <p className="text-sm text-gray-500">Software Engineer</p>
+          {/* Animated Partner Logos Carousel */}
+          <div className="relative">
+            <div className="flex gap-8 animate-scroll">
+              {/* Duplicate partners for seamless loop */}
+              {[
+                ...[
+                  { name: "Microsoft" },
+                  { name: "Google" },
+                  { name: "Amazon" },
+                  { name: "Meta" },
+                  { name: "Apple" },
+                  { name: "IBM" },
+                  { name: "Netflix" },
+                  { name: "Tesla" },
+                ],
+                ...[
+                  { name: "Microsoft" },
+                  { name: "Google" },
+                  { name: "Amazon" },
+                  { name: "Meta" },
+                  { name: "Apple" },
+                  { name: "IBM" },
+                  { name: "Netflix" },
+                  { name: "Tesla" },
+                ],
+              ].map((partner, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-48 bg-gray-50 rounded-2xl p-8 hover:bg-white transition-all duration-300 hover:shadow-xl border border-gray-100 hover:border-gray-300"
+                >
+                  <div className="flex items-center justify-center h-16">
+                    <div className="text-2xl font-bold text-gray-600 hover:text-gray-900 transition-colors duration-300">
+                      {partner.name}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-            <div className="p-8 rounded-2xl bg-gray-50 border border-gray-100 relative hover:border-blue-200 transition-colors group hover:shadow-lg hover:bg-white">
-              <MessageSquare className="absolute -top-4 -right-4 text-blue-500 bg-white p-2 rounded-lg border border-gray-100 group-hover:scale-110 transition-transform shadow-sm" size={40} />
-              <p className="text-gray-600 mb-6 text-lg leading-relaxed">"The platform is incredibly intuitive and the community is so supportive. Highly recommended for anyone looking to upskill."</p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full"></div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Sarah Chen</h4>
-                  <p className="text-sm text-gray-500">Product Designer</p>
-                </div>
-              </div>
+          </div>
+
+          {/* Stats Below Partners */}
+          <div className="grid grid-cols-3 gap-8 mt-16 pt-16 border-t border-gray-200">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-sky-600 mb-2">50+</div>
+              <div className="text-gray-600">شريك تعليمي</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-sky-600 mb-2">{visitorCount > 0 ? visitorCount.toLocaleString() : '10K+'}</div>
+              <div className="text-gray-600">طالب نشط</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-sky-600 mb-2">95%</div>
+              <div className="text-gray-600">نسبة الرضا</div>
             </div>
           </div>
         </div>
+
+        {/* CSS Animation */}
+        <style>{`
+          @keyframes scroll {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+          
+          .animate-scroll {
+            animation: scroll 30s linear infinite;
+          }
+          
+          .animate-scroll:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
       </section>
 
       {/* CTA Section */}
       <section className="py-32 px-6 text-center relative overflow-hidden bg-gray-900 text-white">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-orange-900/20 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-sky-900/20 pointer-events-none"></div>
         <div className="container mx-auto max-w-3xl relative z-10">
           <h2 className="text-4xl md:text-6xl font-bold mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700">Ready to start your journey?</h2>
           <p className="text-xl text-gray-400 mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">Join thousands of others building the future with AVinar.</p>
           <Button
             size="lg"
-            className="bg-orange-500 text-white hover:bg-orange-600 rounded-full px-10 h-16 text-xl font-bold shadow-lg shadow-orange-500/30 transition-all hover:scale-105 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200"
+            className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-10 h-16 text-xl font-bold shadow-lg shadow-sky-500/30 transition-all hover:scale-105 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200"
             onClick={() => navigate("/register")}
           >
             Get Started Now
@@ -309,16 +378,15 @@ const Index = () => {
         <div className="container mx-auto max-w-6xl flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center text-white font-bold text-xs">A</div>
-            <span className="font-bold text-xl text-gray-900">AVinar Labs</span>
+            <span className="font-bold text-xl text-gray-900">AVinar.source</span>
           </div>
 
           <div className="flex gap-8 text-sm text-gray-500">
-            <Link to="/privacy" className="hover:text-orange-500 transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-orange-500 transition-colors">Terms</Link>
-            <Link to="/contact" className="hover:text-orange-500 transition-colors">Contact</Link>
+            <Link to="/privacy" className="hover:text-sky-500 transition-colors">Privacy</Link>
+            <Link to="/terms" className="hover:text-sky-500 transition-colors">Terms</Link>
+            <Link to="/contact" className="hover:text-sky-500 transition-colors">Contact</Link>
           </div>
 
-          <p className="text-sm text-gray-500">© 2024 AVinar Center. All rights reserved.</p>
         </div>
       </footer>
     </div>

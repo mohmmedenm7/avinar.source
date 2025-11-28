@@ -2,6 +2,7 @@
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { API_BASE_URL } from '@/config/env';
@@ -21,6 +22,7 @@ interface Course {
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -105,47 +107,60 @@ const CoursesPage = () => {
     <div className="min-h-screen bg-gray-50 py-16 px-4">
       <h1 className="text-4xl font-bold text-center mb-12">الكورسات المتاحة</h1>
 
+      <div className="max-w-md mx-auto mb-12">
+        <Input
+          type="text"
+          placeholder="ابحث عن كورس..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full text-right"
+          dir="rtl"
+        />
+      </div>
+
       {loading && <p className="text-center">جاري التحميل...</p>}
 
       <div className="grid md:grid-cols-3 gap-8">
-        {courses.map((course) => {
-          const isPaid = course.isPaid === true;
+        {courses
+          .filter((course) => course.title.toLowerCase().includes(searchQuery.toLowerCase()))
+          .map((course) => {
+            const isPaid = course.isPaid === true;
 
-          return (
-            <Card key={course._id} className="flex flex-col">
-              <CardHeader className="p-0">
-                <img
-                  src={getImageUrl(course.imageCover)}
-                  alt={course.title}
-                  className="w-full h-48 object-cover"
-                />
-              </CardHeader>
+            return (
+              <Card key={course._id} className="flex flex-col">
+                <CardHeader className="p-0">
+                  <img
+                    src={getImageUrl(course.imageCover)}
+                    alt={course.title}
+                    className="w-full h-48 object-cover"
+                  />
+                </CardHeader>
 
-              <CardContent className="flex flex-col flex-grow">
-                <CardTitle className="text-right">{course.title}</CardTitle>
-                <p className="text-right text-gray-600 mb-4 text-sm">{course.description}</p>
-                <p className="text-right font-bold text-gray-600 mb-2">${course.price}</p>
+                <CardContent className="flex flex-col flex-grow">
+                  <CardTitle className="text-right">{course.title}</CardTitle>
+                  <p className="text-right text-gray-600 mb-4 text-sm">{course.description}</p>
+                  <p className="text-right font-bold text-gray-600 mb-2">${course.price}</p>
 
-                {isPaid ? (
-                  <Button
-                    onClick={() => navigate(`/course/${course._id}`)}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    تم الدفع - عرض الكورس
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleAddToCart(course._id)}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    أضف للسلة
-                  </Button>
-                )}
+                  {isPaid ? (
+                    <Button
+                      onClick={() => navigate(`/course/${course._id}`)}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      تم الدفع - عرض الكورس
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => navigate(`/course-details/${course._id}`)}
+                      className="w-full bg-sky-600 hover:bg-sky-700"
+                    >
+                      عرض التفاصيل
+                    </Button>
+                  )}
 
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })}
 
       </div>
 

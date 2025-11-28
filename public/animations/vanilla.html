@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanilla Animations - أنيميشنات خفيفة</title>
+  <link rel="stylesheet" href="vanilla.css">
+</head>
+<body>
+  <div class="container">
+    <h1>مجموعة الأنيميشنات الاحترافية</h1>
+    <p class="subtitle">نسخة CSS/HTML خفيفة بدون مكتبات خارجية</p>
+
+    <!-- Loading Spinners -->
+    <section class="section">
+      <h2>مؤشرات التحميل (Loading Indicators)</h2>
+      
+      <div class="demo-grid">
+        <div class="demo-item">
+          <h3>Spinner 1: حلقة دوارة</h3>
+          <div class="loading-spinner"></div>
+        </div>
+
+        <div class="demo-item">
+          <h3>Spinner 2: نقاط متحركة</h3>
+          <div class="loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="demo-item">
+          <h3>Spinner 3: شريط تقدم</h3>
+          <div class="loading-bar">
+            <div class="loading-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Micro Interactions -->
+    <section class="section">
+      <h2>تفاعلات دقيقة (Micro Interactions)</h2>
+      
+      <div class="demo-grid">
+        <div class="demo-item">
+          <h3>Button Press</h3>
+          <button class="btn btn-press">اضغط هنا</button>
+        </div>
+
+        <div class="demo-item">
+          <h3>Card Lift</h3>
+          <div class="card card-lift">
+            <h4>بطاقة تفاعلية</h4>
+            <p>مرر الماوس فوقي</p>
+          </div>
+        </div>
+
+        <div class="demo-item">
+          <h3>Icon Bounce</h3>
+          <div class="icon-bounce">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page Transitions -->
+    <section class="section">
+      <h3>انتقالات الصفحات (Page Transitions)</h3>
+      <p>استخدم الأكواد في vanilla.css لإضافة انتقالات بين الصفحات</p>
+      
+      <div class="demo-item">
+        <button class="btn btn-press" onclick="simulatePageTransition()">
+          محاكاة انتقال الصفحة
+        </button>
+        <div id="page-content" class="page-content">
+          <p>محتوى الصفحة الحالية</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Accessibility Note -->
+    <section class="section accessibility-note">
+      <h3>⚠️ ملاحظة الوصول (Accessibility)</h3>
+      <p>جميع الأنيميشنات تحترم تفضيل المستخدم لتقليل الحركة (prefers-reduced-motion)</p>
+      <p>للاختبار: افتح إعدادات النظام وفعّل "تقليل الحركة"</p>
+    </section>
+  </div>
+
+  <script>
+    // Simulate page transition
+    function simulatePageTransition() {
+      const content = document.getElementById('page-content');
+      content.classList.add('page-transition-out');
+      
+      setTimeout(() => {
+        content.innerHTML = '<p>محتوى الصفحة الجديدة! 🎉</p>';
+        content.classList.remove('page-transition-out');
+        content.classList.add('page-transition-in');
+        
+        setTimeout(() => {
+          content.classList.remove('page-transition-in');
+        }, 450);
+      }, 450);
+    }
+  </script>
+</body>
+</html>

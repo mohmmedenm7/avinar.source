@@ -148,7 +148,7 @@ const CourseViewPage = () => {
 
         <button
           onClick={() => (window.location.href = "/courses")}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="px-6 py-3 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
         >
           الرجوع للكورسات
         </button>
@@ -182,7 +182,7 @@ const CourseViewPage = () => {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
             onClick={() => window.history.back()}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition"
+            className="flex items-center gap-2 text-sky-600 hover:text-sky-700 transition"
           >
             <ArrowRight size={20} />
             العودة
@@ -213,21 +213,21 @@ const CourseViewPage = () => {
 
               <div className="grid grid-cols-3 gap-4 py-4 border-t border-b mb-4">
                 <div className="flex items-center gap-3">
-                  <Users size={24} className="text-blue-600" />
+                  <Users size={24} className="text-sky-600" />
                   <div>
                     <p className="text-sm text-gray-600">الطلاب</p>
                     <p className="font-bold">{course.studentsCount || 0}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Clock size={24} className="text-blue-600" />
+                  <Clock size={24} className="text-sky-600" />
                   <div>
                     <p className="text-sm text-gray-600">الدقائق</p>
                     <p className="font-bold">{totalDuration}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Play size={24} className="text-blue-600" />
+                  <Play size={24} className="text-sky-600" />
                   <div>
                     <p className="text-sm text-gray-600">المحاضرات</p>
                     <p className="font-bold">{totalLectures}</p>
@@ -265,9 +265,9 @@ const CourseViewPage = () => {
                       >
                         <div className="flex items-center gap-3">
                           {expandedSections.has(sectionIndex) ? (
-                            <ChevronUp size={20} className="text-blue-600" />
+                            <ChevronUp size={20} className="text-sky-600" />
                           ) : (
-                            <ChevronDown size={20} className="text-blue-600" />
+                            <ChevronDown size={20} className="text-sky-600" />
                           )}
                           <h3 className="font-bold text-lg">{section.title}</h3>
                           <span className="text-sm text-gray-500">
@@ -283,13 +283,13 @@ const CourseViewPage = () => {
                             <button
                               key={lectureIndex}
                               onClick={() => setSelectedLecture(lecture)}
-                              className={`w-full p-4 text-right hover:bg-blue-50 transition-all ${selectedLecture === lecture
-                                ? "bg-blue-100 border-r-4 border-blue-600"
+                              className={`w-full p-4 text-right hover:bg-sky-50 transition-all ${selectedLecture === lecture
+                                ? "bg-sky-100 border-r-4 border-sky-600"
                                 : ""
                                 }`}
                             >
                               <div className="flex items-start gap-3">
-                                <Play size={18} className="text-blue-600 flex-shrink-0 mt-1" />
+                                <Play size={18} className="text-sky-600 flex-shrink-0 mt-1" />
                                 <div className="flex-grow text-right">
                                   <p className="font-semibold">{lecture.title}</p>
                                   {lecture.description && (
@@ -321,12 +321,44 @@ const CourseViewPage = () => {
             <div className="bg-black rounded-lg overflow-hidden shadow-lg sticky top-24">
               {selectedLecture?.video ? (
                 <div>
-                  <video
-                    src={selectedLecture.video}
-                    controls
-                    className="w-full"
-                    style={{ maxHeight: "400px" }}
-                  />
+                  {/* Smart Video Player - YouTube or Direct */}
+                  {(() => {
+                    const videoUrl = selectedLecture.video;
+
+                    // Check if it's a YouTube URL
+                    const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+
+                    if (isYouTube) {
+                      // Extract YouTube video ID
+                      let videoId = '';
+                      if (videoUrl.includes('youtube.com/watch?v=')) {
+                        videoId = videoUrl.split('v=')[1]?.split('&')[0];
+                      } else if (videoUrl.includes('youtu.be/')) {
+                        videoId = videoUrl.split('youtu.be/')[1]?.split('?')[0];
+                      }
+
+                      return (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${videoId}`}
+                          className="w-full aspect-video"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          title={selectedLecture.title}
+                        />
+                      );
+                    } else {
+                      // Direct video file
+                      return (
+                        <video
+                          src={videoUrl}
+                          controls
+                          className="w-full"
+                          style={{ maxHeight: "400px" }}
+                        />
+                      );
+                    }
+                  })()}
+
                   <div className="bg-white p-4">
                     <h3 className="font-bold text-lg mb-2">{selectedLecture.title}</h3>
                     {selectedLecture.description && (
