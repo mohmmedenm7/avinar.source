@@ -154,33 +154,32 @@ const AdminDashboard = () => {
   };
 
   // Statistics Cards Data
-  const statsCards: StatCard[] = [
-    {
-      label: "إجمالي المستخدمين",
-      value: totalUsers,
-      icon: "user",
-      color: "text-blue-600",
-    },
-    {
-      label: "إجمالي المنتجات",
-      value: totalProducts,
-      icon: "box",
-      color: "text-purple-600",
-    },
-    {
-      label: "إجمالي الطلبات",
-      value: totalOrders,
-      icon: "shopping-cart",
-      color: "text-green-600",
-    },
-    {
-      label: "الإيرادات",
-      value: `$${totalRevenue.toFixed(2)}`,
-      icon: "dollar-sign",
-      color: "text-yellow-600",
-    },
-  ];
-
+ const statsCards: StatCard[] = [
+  {
+    label: "إجمالي المستخدمين",
+    value: totalUsers,
+    icon: "user",
+    color: "text-gray-700",  // كان text-blue-600
+  },
+  {
+    label: "إجمالي المنتجات",
+    value: totalProducts,
+    icon: "box",
+    color: "text-gray-800",  // كان text-purple-600
+  },
+  {
+    label: "إجمالي الطلبات",
+    value: totalOrders,
+    icon: "shopping-cart",
+    color: "text-gray-900",  // كان text-green-600
+  },
+  {
+    label: "الإيرادات",
+    value: `$${totalRevenue.toFixed(2)}`,
+    icon: "dollar-sign",
+    color: "text-black",  // كان text-yellow-600
+  },
+];
   return (
     <div className="min-h-screen bg-gray-50 font-sans pt-20" dir="rtl">
       <div className="flex">
@@ -245,23 +244,32 @@ const AdminDashboard = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {statsCards.map((stat, idx) => (
-              <Card key={idx} className="p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">{stat.label}</p>
-                    <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
-                  </div>
-                  <div className={`p-3 rounded-xl bg-gray-50`}>
-                    <div className={stat.color}>
-                      {iconMap[stat.icon]}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
+        {/* Stats Grid */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  {statsCards.map((stat, idx) => {
+    const gradients = [
+      "bg-gradient-to-br from-gray-50 to-gray-100",
+      "bg-gradient-to-br from-slate-50 to-slate-100",
+      "bg-gradient-to-br from-zinc-50 to-zinc-100",
+      "bg-gradient-to-br from-stone-50 to-stone-100"
+    ];
+    return (
+      <Card key={idx} className="p-6 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-500 mb-1">{stat.label}</p>
+            <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
           </div>
+          <div className={`p-3 rounded-xl ${gradients[idx]} shadow-inner`}>
+            <div className={stat.color}>
+              {iconMap[stat.icon]}
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  })}
+</div>
 
           {/* Content Area */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] p-6">

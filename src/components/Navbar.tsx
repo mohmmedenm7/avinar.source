@@ -138,11 +138,15 @@ const Navbar = () => {
                                 {userEmail.split('@')[0]}
                             </span>
 
-                            {(role === "admin" || role === "manager") && (
+                            {(role === "admin" || role === "manager" || role === "user") && (
                                 <Button
                                     variant="ghost"
                                     className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                                    onClick={() => navigate(role === "admin" ? "/AdminDashboard" : "/InstructorDashboard")}
+                                    onClick={() => {
+                                        if (role === "admin") navigate("/AdminDashboard");
+                                        else if (role === "manager") navigate("/InstructorDashboard");
+                                        else if (role === "user") navigate("/UserDashboard");
+                                    }}
                                 >
                                     Dashboard
                                 </Button>
@@ -196,8 +200,12 @@ const Navbar = () => {
                     <div className="pt-4 border-t border-gray-200 flex flex-col gap-3">
                         {isLoggedIn ? (
                             <>
-                                {(role === "admin" || role === "manager") && (
-                                    <Button onClick={() => navigate(role === "admin" ? "/AdminDashboard" : "/InstructorDashboard")}>
+                                {(role === "admin" || role === "manager" || role === "user") && (
+                                    <Button onClick={() => {
+                                        if (role === "admin") navigate("/AdminDashboard");
+                                        else if (role === "manager") navigate("/InstructorDashboard");
+                                        else if (role === "user") navigate("/UserDashboard");
+                                    }}>
                                         Dashboard
                                     </Button>
                                 )}

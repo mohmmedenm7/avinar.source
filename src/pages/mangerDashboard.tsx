@@ -116,11 +116,11 @@ export default function InstructorDashboard() {
   const totalStudentsCount = courses.reduce((sum, course) => sum + (course.studentsCount || 0), 0);
   const totalRevenue = courses.reduce((sum, course) => sum + (course.price || 0) * (course.studentsCount || 0), 0);
 
-  const stats = [
-    { label: "إجمالي الكورسات", value: totalCourses, icon: BookOpen, color: "text-blue-600", bg: "bg-blue-100" },
-    { label: "إجمالي الطلاب", value: totalStudentsCount, icon: Users, color: "text-green-600", bg: "bg-green-100" },
-    { label: "الإيرادات المقدرة", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "text-yellow-600", bg: "bg-yellow-100" },
-  ];
+const stats = [
+  { label: "إجمالي الكورسات", value: totalCourses, icon: BookOpen, color: "text-gray-700", bg: "bg-gradient-to-br from-gray-50 to-gray-100" },
+  { label: "إجمالي الطلاب", value: totalStudentsCount, icon: Users, color: "text-gray-800", bg: "bg-gradient-to-br from-slate-50 to-slate-100" },
+  { label: "الإيرادات المقدرة", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "text-gray-900", bg: "bg-gradient-to-br from-zinc-50 to-zinc-100" },
+];
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans pt-20" dir="rtl">
@@ -179,13 +179,13 @@ export default function InstructorDashboard() {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {stats.map((stat, idx) => (
-              <Card key={idx} className="p-6 hover:shadow-md transition-shadow">
+             <Card key={idx} className="p-6 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500 mb-1">{stat.label}</p>
                     <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
                   </div>
-                  <div className={`p-3 rounded-xl ${stat.bg}`}>
+                  <div className={`p-3 rounded-xl ${stat.bg} shadow-inner`}>
                     <stat.icon className={`w-6 h-6 ${stat.color}`} />
                   </div>
                 </div>
