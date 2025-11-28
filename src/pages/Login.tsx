@@ -8,6 +8,7 @@ interface LoginResponse {
   user?: {
     email?: string;
     role?: string;
+    _id?: string;
   };
   email?: string;
   role?: string;
@@ -15,6 +16,7 @@ interface LoginResponse {
   data?: {
     email?: string;
     role?: string;
+    _id?: string;
   };
 }
 
@@ -72,6 +74,12 @@ const Login = () => {
       localStorage.setItem("token", token);
       localStorage.setItem("email", userEmail);
       localStorage.setItem("role", role);
+
+      // Store User ID if available
+      const userId = data.data?._id || data.user?._id;
+      if (userId) {
+        localStorage.setItem("userId", userId);
+      }
 
       // إرسال حدث لتحديث Navbar
       window.dispatchEvent(new Event("authChanged"));

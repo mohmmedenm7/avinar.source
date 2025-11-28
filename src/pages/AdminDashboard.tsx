@@ -1,13 +1,14 @@
 ﻿import { useEffect, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { OrdersComponent } from "@/components/admin/OrdersComponent";
 import { ProductsComponent } from "@/components/admin/ProductsComponent";
 import { UsersComponent } from "@/components/admin/UsersComponent";
-import { LogOut, Users, Box, ShoppingCart, DollarSign } from "lucide-react";
+import { LogOut, Users, Box, ShoppingCart, DollarSign, LayoutDashboard, ShoppingBag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from '@/config/env';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface User {
   _id: string;
@@ -158,123 +159,117 @@ const AdminDashboard = () => {
       label: "إجمالي المستخدمين",
       value: totalUsers,
       icon: "user",
-      color: "#6B7280",
+      color: "text-blue-600",
     },
     {
       label: "إجمالي المنتجات",
       value: totalProducts,
       icon: "box",
-      color: "#4B5563",
+      color: "text-purple-600",
     },
     {
       label: "إجمالي الطلبات",
       value: totalOrders,
       icon: "shopping-cart",
-      color: "#9CA3AF",
+      color: "text-green-600",
     },
     {
       label: "الإيرادات",
       value: `$${totalRevenue.toFixed(2)}`,
       icon: "dollar-sign",
-      color: "#374151",
+      color: "text-yellow-600",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded transition-colors"
-          >
-            <LogOut size={18} />
-            <span className="text-sm font-medium">تسجيل خروج</span>
-          </button>
-
-          <h1 className="text-2xl font-bold text-gray-900">لوحة التحكم</h1>
-
-          <div className="text-right">
-            <p className="text-sm text-gray-600">مرحباً بك في الإدارة</p>
+    <div className="min-h-screen bg-gray-50 font-sans pt-20" dir="rtl">
+      <div className="flex">
+        {/* Sidebar (Right) */}
+        <aside className="w-64 bg-white border-l border-gray-200 min-h-[calc(100vh-80px)] fixed right-0 top-20 hidden md:block">
+          <div className="p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">لوحة التحكم</h2>
+            <nav className="space-y-2">
+              <button
+                onClick={() => setActiveTab("orders")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "orders"
+                  ? "bg-blue-50 text-blue-600 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
+              >
+                <ShoppingBag size={20} />
+                الطلبات
+                <span className="mr-auto bg-blue-100 text-blue-600 text-xs px-2 py-0.5 rounded-full">{totalOrders}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("products")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "products"
+                  ? "bg-blue-50 text-blue-600 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
+              >
+                <Box size={20} />
+                المنتجات
+                <span className="mr-auto bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{totalProducts}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("users")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "users"
+                  ? "bg-blue-50 text-blue-600 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
+              >
+                <Users size={20} />
+                المستخدمين
+                <span className="mr-auto bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{totalUsers}</span>
+              </button>
+            </nav>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {statsCards.map((stat, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 overflow-hidden group"
+          <div className="absolute bottom-0 w-full p-6 border-t border-gray-100">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 gap-3"
+              onClick={handleLogout}
             >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  {/* Left Content */}
-                  <div className="flex-1">
-                    <p className="text-gray-600 text-sm font-medium mb-1">
-                      {stat.label}
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {stat.value}
-                    </p>
-                  </div>
+              <LogOut size={20} />
+              تسجيل خروج
+            </Button>
+          </div>
+        </aside>
 
-                  {/* Icon Container */}
-                  <div
-                    className="flex items-center justify-center w-12 h-12 rounded-lg ml-4 transition-all duration-200 group-hover:scale-110"
-                    style={{ backgroundColor: `${stat.color}15` }}
-                  >
-                    <div style={{ color: stat.color }}>
+        {/* Main Content */}
+        <main className="flex-1 md:mr-64 p-8">
+          {/* Mobile Header */}
+          <div className="md:hidden mb-6 flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">لوحة التحكم</h1>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {statsCards.map((stat, idx) => (
+              <Card key={idx} className="p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">{stat.label}</p>
+                    <h3 className="text-3xl font-bold text-gray-900">{stat.value}</h3>
+                  </div>
+                  <div className={`p-3 rounded-xl bg-gray-50`}>
+                    <div className={stat.color}>
                       {iconMap[stat.icon]}
                     </div>
                   </div>
                 </div>
+              </Card>
+            ))}
+          </div>
 
-                {/* Bottom Line Accent */}
-                <div
-                  className="h-1 rounded-full transition-all duration-200 group-hover:h-1.5"
-                  style={{ backgroundColor: stat.color }}
-                ></div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Tabs Section */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            {/* Tab List - Minimal Style */}
-            <TabsList className="grid w-full grid-cols-3 gap-0 bg-white border-b border-gray-200 p-0 rounded-none h-auto">
-              <TabsTrigger
-                value="orders"
-                className="px-6 py-4 rounded-none font-medium text-base text-gray-700 border-b-2 border-transparent hover:text-gray-900 hover:bg-gray-50 data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:bg-white transition-all duration-200"
-              >
-                الطلبات ({totalOrders})
-              </TabsTrigger>
-              <TabsTrigger
-                value="products"
-                className="px-6 py-4 rounded-none font-medium text-base text-gray-700 border-b-2 border-transparent hover:text-gray-900 hover:bg-gray-50 data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:bg-white transition-all duration-200"
-              >
-                المنتجات ({totalProducts})
-              </TabsTrigger>
-              <TabsTrigger
-                value="users"
-                className="px-6 py-4 rounded-none font-medium text-base text-gray-700 border-b-2 border-transparent hover:text-gray-900 hover:bg-gray-50 data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:bg-white transition-all duration-200"
-              >
-                المستخدمين ({totalUsers})
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Content */}
-            <div className="p-6">
-              <TabsContent value="orders" className="mt-0">
+          {/* Content Area */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] p-6">
+            {activeTab === "orders" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">إدارة الطلبات</h2>
+                </div>
                 {loadingOrders ? (
                   <div className="flex flex-col items-center justify-center py-16">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
@@ -292,9 +287,14 @@ const AdminDashboard = () => {
                     searchQuery=""
                   />
                 )}
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="products" className="mt-0">
+            {activeTab === "products" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">إدارة المنتجات</h2>
+                </div>
                 {loadingProducts ? (
                   <div className="flex flex-col items-center justify-center py-16">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
@@ -312,9 +312,14 @@ const AdminDashboard = () => {
                     searchQuery=""
                   />
                 )}
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="users" className="mt-0">
+            {activeTab === "users" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">إدارة المستخدمين</h2>
+                </div>
                 {loadingUsers ? (
                   <div className="flex flex-col items-center justify-center py-16">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
@@ -332,10 +337,10 @@ const AdminDashboard = () => {
                     searchQuery=""
                   />
                 )}
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
 
       {/* CSS Minimal Animations */}

@@ -22,6 +22,8 @@ import CartPage from "./pages/CartPage"; // ✅ إضافة صفحة السلة
 import AdminOrderDetails from "./pages/admin/AdminOrderDetails";
 import CourseViewPage from "./pages/CourseViewPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +108,8 @@ const App = () => (
                 <Route path="/order/:orderId" element={<ProtectedOrderDetailsRoute />} />
                 <Route path="/course-details/:courseId" element={<CourseDetailsPage />} />
                 <Route path="/course/:courseId" element={<CourseViewPage />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

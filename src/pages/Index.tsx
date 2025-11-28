@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/config/env";
 import { getImageUrl } from "@/utils/imageUtils";
 import axios from "axios";
+import { motion } from "framer-motion";
 
 interface Course {
   _id: string;
@@ -70,6 +71,23 @@ const Index = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true },
+    transition: { duration: 0.5 }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F3F4F6] text-gray-900 font-sans selection:bg-sky-500/30 overflow-x-hidden">
 
@@ -93,27 +111,45 @@ const Index = () => {
         ></div>
 
         <div className="container mx-auto max-w-5xl relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-sm hover:shadow-md transition-all cursor-default">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 mb-8 shadow-sm hover:shadow-md transition-all cursor-default"
+          >
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             <span className="text-sm font-medium text-gray-600">New AI Courses Available</span>
-          </div>
+          </motion.div>
 
-          <h1
-            className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tight mb-8 text-gray-900 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both delay-100"
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tight mb-8 text-gray-900"
             style={{
               transform: `translate(${mousePosition.x * -20}px, ${mousePosition.y * -20}px)`
             }}
           >
             Think faster with <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-sky-600">AVinar.source</span>
-          </h1>
+          </motion.h1>
 
-          <p className="max-w-2xl mx-auto text-gray-600 text-lg md:text-xl mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both delay-200">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+            className="max-w-2xl mx-auto text-gray-600 text-lg md:text-xl mb-12 leading-relaxed"
+          >
             Master the skills of tomorrow with our advanced learning platform.
             Join thousands of students transforming their careers through AI-driven education.
-          </p>
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row justify-center gap-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both delay-300">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.6 }}
+            className="flex flex-col sm:flex-row justify-center gap-4"
+          >
             <Button
               size="lg"
               className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-sky-500/20"
@@ -129,11 +165,14 @@ const Index = () => {
             >
               Browse Courses
             </Button>
-          </div>
+          </motion.div>
 
           {/* Hero Image / Dashboard Preview */}
-          <div
-            className="mt-20 relative mx-auto max-w-4xl animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both delay-500 perspective-1000"
+          <motion.div
+            initial={{ opacity: 0, y: 40, rotateX: 10 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ duration: 1, delay: 0.8 }}
+            className="mt-20 relative mx-auto max-w-4xl perspective-1000"
             style={{
               transform: `rotateX(${mousePosition.y * 5}deg) rotateY(${mousePosition.x * 5}deg)`
             }}
@@ -150,21 +189,30 @@ const Index = () => {
                 <p className="text-gray-400 font-mono">Interactive Learning Environment</p>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </header>
 
       {/* Features Grid */}
       <section className="py-24 px-6 bg-white">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 view-animate">
+          <motion.div
+            {...fadeInUp}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">Built for the future</h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
               Experience a learning platform designed to adapt to your needs and pace.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-3 gap-8"
+          >
             {[
               { icon: Zap, title: "Lightning Fast", desc: "Optimized for speed and performance." },
               { icon: Shield, title: "Secure & Private", desc: "Your data is protected with enterprise-grade security." },
@@ -173,19 +221,22 @@ const Index = () => {
               { icon: Cpu, title: "AI Powered", desc: "Personalized recommendations driven by AI." },
               { icon: Users, title: "Expert Mentors", desc: "Learn directly from industry leaders." }
             ].map((feature, idx) => (
-              <div
+              <motion.div
                 key={idx}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  show: { opacity: 1, y: 0 }
+                }}
                 className="p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-sky-200 transition-all duration-300 group hover:-translate-y-2 hover:bg-white hover:shadow-xl"
-                style={{ animationDelay: `${idx * 100}ms` }}
               >
                 <div className="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <feature.icon className="text-sky-500" size={24} />
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-gray-900">{feature.title}</h3>
                 <p className="text-gray-500 text-sm">{feature.desc}</p>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -194,7 +245,10 @@ const Index = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-100/50 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
 
         <div className="container mx-auto max-w-6xl">
-          <div className="flex justify-between items-end mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <motion.div
+            {...fadeInUp}
+            className="flex justify-between items-end mb-12"
+          >
             <div>
               <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">Featured Courses</h2>
               <p className="text-gray-500">Explore our most popular learning paths.</p>
@@ -202,19 +256,28 @@ const Index = () => {
             <Link to="/courses" className="hidden md:flex items-center gap-2 text-sky-500 hover:text-sky-600 transition-colors group font-medium">
               View All Courses <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-          </div>
+          </motion.div>
 
           {loading ? (
             <div className="flex justify-center py-20">
               <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-8">
-              {courses.map((course, idx) => (
-                <div
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid md:grid-cols-3 gap-8"
+            >
+              {courses.map((course) => (
+                <motion.div
                   key={course._id}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    show: { opacity: 1, y: 0 }
+                  }}
                   className="group relative bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-sky-200 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
-                  style={{ animationDelay: `${idx * 150}ms` }}
                 >
                   <div className="aspect-video bg-gray-100 relative overflow-hidden">
                     {course.imageCover ? (
@@ -254,9 +317,9 @@ const Index = () => {
                       <span>1.2k Students</span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
 
           <div className="mt-8 text-center md:hidden">
@@ -270,17 +333,26 @@ const Index = () => {
       {/* Partner Companies Section */}
       <section className="py-20 px-6 bg-white border-y border-gray-200 overflow-hidden">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
+          <motion.div
+            {...fadeInUp}
+            className="text-center mb-12"
+          >
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">
               شركاؤنا في النجاح
             </h2>
             <p className="text-gray-600 text-lg">
               نفخر بالتعاون مع أفضل الشركات والمؤسسات التعليمية
             </p>
-          </div>
+          </motion.div>
 
           {/* Animated Partner Logos Carousel */}
-          <div className="relative">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1 }}
+            className="relative"
+          >
             <div className="flex gap-8 animate-scroll">
               {/* Duplicate partners for seamless loop */}
               {[
@@ -317,23 +389,29 @@ const Index = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Stats Below Partners */}
-          <div className="grid grid-cols-3 gap-8 mt-16 pt-16 border-t border-gray-200">
-            <div className="text-center">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="grid grid-cols-3 gap-8 mt-16 pt-16 border-t border-gray-200"
+          >
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }} className="text-center">
               <div className="text-4xl font-bold text-sky-600 mb-2">50+</div>
               <div className="text-gray-600">شريك تعليمي</div>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }} className="text-center">
               <div className="text-4xl font-bold text-sky-600 mb-2">{visitorCount > 0 ? visitorCount.toLocaleString() : '10K+'}</div>
               <div className="text-gray-600">طالب نشط</div>
-            </div>
-            <div className="text-center">
+            </motion.div>
+            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }} className="text-center">
               <div className="text-4xl font-bold text-sky-600 mb-2">95%</div>
               <div className="text-gray-600">نسبة الرضا</div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* CSS Animation */}
@@ -361,15 +439,35 @@ const Index = () => {
       <section className="py-32 px-6 text-center relative overflow-hidden bg-gray-900 text-white">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-sky-900/20 pointer-events-none"></div>
         <div className="container mx-auto max-w-3xl relative z-10">
-          <h2 className="text-4xl md:text-6xl font-bold mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700">Ready to start your journey?</h2>
-          <p className="text-xl text-gray-400 mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">Join thousands of others building the future with AVinar.</p>
-          <Button
-            size="lg"
-            className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-10 h-16 text-xl font-bold shadow-lg shadow-sky-500/30 transition-all hover:scale-105 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200"
-            onClick={() => navigate("/register")}
+          <motion.h2
+            {...fadeInUp}
+            className="text-4xl md:text-6xl font-bold mb-8"
           >
-            Get Started Now
-          </Button>
+            Ready to start your journey?
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-xl text-gray-400 mb-10"
+          >
+            Join thousands of others building the future with AVinar.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Button
+              size="lg"
+              className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-10 h-16 text-xl font-bold shadow-lg shadow-sky-500/30 transition-all hover:scale-105"
+              onClick={() => navigate("/register")}
+            >
+              Get Started Now
+            </Button>
+          </motion.div>
         </div>
       </section>
 
