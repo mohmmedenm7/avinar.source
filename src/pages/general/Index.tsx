@@ -118,7 +118,7 @@ const Index = () => {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 mb-8 shadow-sm hover:shadow-md transition-all cursor-default"
           >
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span className="text-sm font-medium text-gray-600">New AI Courses Available</span>
+            <span className="text-sm font-medium text-gray-600">دورات الذكاء الاصطناعي الجديدة متاحة الآن</span>
           </motion.div>
 
           <motion.h1
@@ -130,7 +130,7 @@ const Index = () => {
               transform: `translate(${mousePosition.x * -20}px, ${mousePosition.y * -20}px)`
             }}
           >
-            Think faster with <br />
+            فكر بشكل أسرع مع <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-sky-600">AVinar.source</span>
           </motion.h1>
 
@@ -140,8 +140,8 @@ const Index = () => {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="max-w-2xl mx-auto text-gray-600 text-lg md:text-xl mb-12 leading-relaxed"
           >
-            Master the skills of tomorrow with our advanced learning platform.
-            Join thousands of students transforming their careers through AI-driven education.
+            أتقن مهارات المستقبل مع منصتنا التعليمية المتقدمة.
+            انضم إلى آلاف الطلاب الذين يحولون مساراتهم المهنية من خلال التعليم المدعوم بالذكاء الاصطناعي.
           </motion.p>
 
           <motion.div
@@ -155,7 +155,7 @@ const Index = () => {
               className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-sky-500/20"
               onClick={() => navigate("/register")}
             >
-              Get Started Free
+              ابدأ مجاناً
             </Button>
             <Button
               variant="outline"
@@ -163,7 +163,7 @@ const Index = () => {
               className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 h-14 text-lg hover:scale-105 transition-transform bg-white"
               onClick={() => navigate("/courses")}
             >
-              Browse Courses
+              تصفح الدورات
             </Button>
           </motion.div>
 
@@ -186,7 +186,7 @@ const Index = () => {
                 style={{ minHeight: '400px', objectFit: 'cover' }}
               />
               <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-gray-400 font-mono">Interactive Learning Environment</p>
+                <p className="text-gray-400 font-mono">بيئة تعليمية تفاعلية</p>
               </div>
             </div>
           </motion.div>
@@ -200,9 +200,9 @@ const Index = () => {
             {...fadeInUp}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">Built for the future</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">مصممة للمستقبل</h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
-              Experience a learning platform designed to adapt to your needs and pace.
+              اختبر منصة تعليمية مصممة لتتكيف مع احتياجاتك ووتيرتك.
             </p>
           </motion.div>
 
@@ -214,12 +214,12 @@ const Index = () => {
             className="grid md:grid-cols-3 gap-8"
           >
             {[
-              { icon: Zap, title: "Lightning Fast", desc: "Optimized for speed and performance." },
-              { icon: Shield, title: "Secure & Private", desc: "Your data is protected with enterprise-grade security." },
-              { icon: BarChart, title: "Track Progress", desc: "Detailed analytics to monitor your growth." },
-              { icon: Globe, title: "Global Community", desc: "Connect with learners from around the world." },
-              { icon: Cpu, title: "AI Powered", desc: "Personalized recommendations driven by AI." },
-              { icon: Users, title: "Expert Mentors", desc: "Learn directly from industry leaders." }
+              { icon: Zap, title: "سريع كالبرق", desc: "محسّن للسرعة والأداء." },
+              { icon: Shield, title: "آمن وخاص", desc: "بياناتك محمية بأمان على مستوى المؤسسات." },
+              { icon: BarChart, title: "تتبع التقدم", desc: "تحليلات مفصلة لمراقبة نموك." },
+              { icon: Globe, title: "مجتمع عالمي", desc: "تواصل مع متعلمين من جميع أنحاء العالم." },
+              { icon: Cpu, title: "مدعوم بالذكاء الاصطناعي", desc: "توصيات مخصصة مدعومة بالذكاء الاصطناعي." },
+              { icon: Users, title: "مرشدون خبراء", desc: "تعلم مباشرة من قادة الصناعة." }
             ].map((feature, idx) => (
               <motion.div
                 key={idx}
@@ -250,11 +250,11 @@ const Index = () => {
             className="flex justify-between items-end mb-12"
           >
             <div>
-              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">Featured Courses</h2>
-              <p className="text-gray-500">Explore our most popular learning paths.</p>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">الدورات المميزة</h2>
+              <p className="text-gray-500">استكشف مساراتنا التعليمية الأكثر شعبية.</p>
             </div>
             <Link to="/courses" className="hidden md:flex items-center gap-2 text-sky-500 hover:text-sky-600 transition-colors group font-medium">
-              View All Courses <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              عرض جميع الدورات <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>
 
@@ -297,7 +297,7 @@ const Index = () => {
                         className="w-full bg-white text-black hover:bg-gray-100 font-bold"
                         onClick={() => navigate(`/course/${course._id}`)}
                       >
-                        View Course
+                        عرض الدورة
                       </Button>
                     </div>
                   </div>
@@ -305,7 +305,7 @@ const Index = () => {
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <span className="text-xs font-bold text-sky-600 uppercase tracking-wider bg-sky-50 px-2 py-1 rounded border border-sky-100">
-                        {course.category?.name || "Course"}
+                        {course.category?.name || "دورة"}
                       </span>
                       <span className="text-gray-900 font-bold bg-gray-100 px-2 py-1 rounded">${course.price}</span>
                     </div>
@@ -314,7 +314,7 @@ const Index = () => {
 
                     <div className="flex items-center gap-2 text-sm text-gray-400 border-t border-gray-100 pt-4">
                       <Users size={14} />
-                      <span>1.2k Students</span>
+                      <span>1.2k طالب</span>
                     </div>
                   </div>
                 </motion.div>
@@ -324,7 +324,7 @@ const Index = () => {
 
           <div className="mt-8 text-center md:hidden">
             <Link to="/courses" className="inline-flex items-center gap-2 text-sky-500 hover:text-sky-600 transition-colors font-medium">
-              View All Courses <ArrowRight size={18} />
+              عرض جميع الدورات <ArrowRight size={18} />
             </Link>
           </div>
         </div>
@@ -443,7 +443,7 @@ const Index = () => {
             {...fadeInUp}
             className="text-4xl md:text-6xl font-bold mb-8"
           >
-            Ready to start your journey?
+            هل أنت مستعد لبدء رحلتك؟
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -452,7 +452,7 @@ const Index = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-xl text-gray-400 mb-10"
           >
-            Join thousands of others building the future with AVinar.
+            انضم إلى الآلاف ممن يبنون المستقبل مع AVinar.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -465,7 +465,7 @@ const Index = () => {
               className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-10 h-16 text-xl font-bold shadow-lg shadow-sky-500/30 transition-all hover:scale-105"
               onClick={() => navigate("/register")}
             >
-              Get Started Now
+              ابدأ الآن
             </Button>
           </motion.div>
         </div>
@@ -480,9 +480,9 @@ const Index = () => {
           </div>
 
           <div className="flex gap-8 text-sm text-gray-500">
-            <Link to="/privacy" className="hover:text-sky-500 transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-sky-500 transition-colors">Terms</Link>
-            <Link to="/contact" className="hover:text-sky-500 transition-colors">Contact</Link>
+            <Link to="/privacy" className="hover:text-sky-500 transition-colors">الخصوصية</Link>
+            <Link to="/terms" className="hover:text-sky-500 transition-colors">الشروط</Link>
+            <Link to="/contact" className="hover:text-sky-500 transition-colors">اتصل بنا</Link>
           </div>
 
         </div>
