@@ -1,0 +1,28 @@
+{
+    "app": {
+        "title": "AVinar",
+        "description": "Integrated Learning Platform"
+    },
+    "nav": {
+        "home": "Home",
+        "courses": "Courses",
+        "about": "About Us",
+        "contact": "Contact",
+        "login": "Login",
+        "signup": "Sign Up",
+        "logout": "Logout",
+        "dashboard": "Dashboard"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "An error occurred",
+        "success": "Operation successful",
+        "back": "Back",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "view": "View",
+        "search": "Search"
+    }
+}

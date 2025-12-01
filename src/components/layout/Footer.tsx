@@ -20,7 +20,11 @@ const Footer = () => {
                   الدورات المتاحة
                 </Link>
               </li>
-           
+              <li>
+                <Link to="/community" className="text-gray-600 hover:text-blue-600">
+                  المجتمع
+                </Link>
+              </li>
               <li>
                 <Link to="/register" className="text-gray-600 hover:text-blue-600">
                   التسجيل
@@ -32,14 +36,13 @@ const Footer = () => {
             <h3 className="text-lg font-semibold mb-4 text-right">تواصل معنا</h3>
             <ul className="space-y-2 text-right">
               <li className="text-gray-600">البريد الإلكتروني: contact@avinar.center</li>
-              <li className="text-gray-600"> </li>
             </ul>
           </div>
         </div>
         <div className="mt-8 pt-8 border-t text-center">
           <p className="text-gray-600 flex items-center justify-center">
             <Copyright className="h-4 w-4 ml-1" />
-            ,Avinar.center 2025
+            Avinar.center 2025
           </p>
         </div>
       </div>

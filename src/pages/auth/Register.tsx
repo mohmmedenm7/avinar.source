@@ -134,7 +134,7 @@ export default function Register() {
 
         const registerData = await registerRes.json();
         console.log("Register response:", registerData);
-        console.log("Register errors:", registerData.errors); // اطبع الأخطاء
+        console.log("Register errors:", registerData.errors);
 
         if (!registerRes.ok) {
           const errorMsg = registerData.errors?.[0]?.msg || registerData.message || "فشل إنشاء الحساب";
@@ -146,9 +146,20 @@ export default function Register() {
 
         showToast("✅ تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول", "success");
         setProgress("✨ جاري التحويل إلى صفحة الدخول...");
+
+        // مسح النموذج
+        setName("");
+        setEmail("");
+        setPassword("");
+        setPasswordConfirm("");
+
+        // إعادة توجيه بعد ثانيتين
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 2000);
       } else {
-        // للمستخدمين العاديين - استخدم signup العادي
-        setProgress("📝 جاري إنشاء الحساب...");
+        // للمستخدمين العاديين - إرسال OTP
+        setProgress("📧 جاري إرسال رمز التحقق...");
         const signupRes = await fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -171,20 +182,21 @@ export default function Register() {
           return;
         }
 
-        showToast("✅ تم التسجيل بنجاح! يمكنك الآن تسجيل الدخول", "success");
-        setProgress("✨ جاري التحويل إلى صفحة الدخول...");
+        // حفظ البريد الإلكتروني في localStorage للخطوة التالية
+        console.log("✅ Signup successful. Setting localStorage email:", email.trim());
+        localStorage.setItem("signupEmail", email.trim());
+
+        showToast("✅ تم إرسال رمز التحقق إلى بريدك الإلكتروني", "success");
+        setProgress("✨ جاري التحويل إلى صفحة التحقق...");
+
+        console.log("⏳ Setting timeout for redirection...");
+        // التحويل إلى صفحة التحقق من OTP
+        setTimeout(() => {
+          console.log("🚀 Redirecting to /verify-signup-otp now...");
+          window.location.href = "/verify-signup-otp";
+        }, 1500);
+        return;
       }
-
-      // مسح النموذج
-      setName("");
-      setEmail("");
-      setPassword("");
-      setPasswordConfirm("");
-
-      // إعادة توجيه بعد ثانيتين
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
     } catch (err) {
       console.error(err);
       showToast("خطأ في الاتصال بالسيرفر", "error");
@@ -199,11 +211,10 @@ export default function Register() {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 flex items-center gap-3 transition-all ${
-            toast.type === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
+          className={`fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 flex items-center gap-3 transition-all ${toast.type === "success"
+            ? "bg-green-500 text-white"
+            : "bg-red-500 text-white"
+            }`}
         >
           {toast.type === "success" ? (
             <CheckCircle2 size={20} />

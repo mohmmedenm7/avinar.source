@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { API_BASE_URL } from '@/config/env';
 import { getImageUrl } from "@/utils/imageUtils";
+import { ReviewsDisplay } from "@/components/reviews/ReviewsDisplay";
 
 interface Lecture {
     title: string;
@@ -312,6 +313,13 @@ const CourseDetailsPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Reviews Section */}
+            <div className="container mx-auto max-w-6xl px-4 pb-12">
+                <div className="bg-white rounded-2xl p-8 shadow-lg">
+                    <ReviewsDisplay productId={courseId || ""} />
+                </div>
+            </div>
         </div>
     );
 };

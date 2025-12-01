@@ -155,6 +155,19 @@ const Login = () => {
           >
             {loading ? "جاري تسجيل الدخول..." : "دخول"}
           </button>
+
+          <div style={{ textAlign: "center", marginTop: 12 }}>
+            <a
+              href="/forgot-password"
+              style={{
+                color: "#3b82f6",
+                textDecoration: "none",
+                fontSize: 14,
+              }}
+            >
+              نسيت كلمة المرور؟
+            </a>
+          </div>
         </form>
       </div>
     </div>

@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { Play, Clock, Star, CheckCircle2 } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
+import { getImageUrl } from "@/utils/imageUtils";
 
 interface Course {
   _id?: string;
@@ -170,22 +171,6 @@ export default function UserCoursesView({ userId, token }: Props) {
             const course = userCourse.courseId;
             return (
               <div
-                key={userCourse._id}
-                className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all group"
-              >
-                {/* Image */}
-                <div className="relative overflow-hidden bg-gray-200 h-40">
-                  {course.imageCover ? (
-                    <img
-                      src={course.imageCover}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
-                      <Play size={48} className="text-white opacity-50" />
-                    </div>
-                  )}
 
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
@@ -202,66 +187,68 @@ export default function UserCoursesView({ userId, token }: Props) {
                     </button>
                   </div>
 
-                  {/* Paid Badge */}
-                  {userCourse.isPaid && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                      <CheckCircle2 size={14} />
-                      مدفوع
-                    </div>
-                  )}
+                  {/* Paid Badge */ }
+            {
+              userCourse.isPaid && (
+                <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <CheckCircle2 size={14} />
+                  مدفوع
+                </div>
+              )
+            }
                 </div>
 
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
-                    {course.title}
-                  </h3>
+        {/* Content */}
+        <div className="p-4">
+          <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+            {course.title}
+          </h3>
 
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {course.description}
-                  </p>
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+            {course.description}
+          </p>
 
-                  {/* Meta */}
-                  <div className="space-y-2 mb-4 text-sm">
-                    <div className="flex items-center justify-between text-gray-700">
-                      <span>السعر:</span>
-                      <span className="font-bold text-blue-600">${course.price}</span>
-                    </div>
+          {/* Meta */}
+          <div className="space-y-2 mb-4 text-sm">
+            <div className="flex items-center justify-between text-gray-700">
+              <span>السعر:</span>
+              <span className="font-bold text-blue-600">${course.price}</span>
+            </div>
 
-                    {course.category && (
-                      <div className="flex items-center justify-between text-gray-700">
-                        <span>التصنيف:</span>
-                        <span className="text-sm">{course.category.name}</span>
-                      </div>
-                    )}
-
-                    {userCourse.purchasedAt && (
-                      <div className="flex items-center justify-between text-gray-600 text-xs">
-                        <Clock size={14} />
-                        <span>
-                          {new Date(userCourse.purchasedAt).toLocaleDateString("ar-EG")}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Watch Button */}
-                  <button
-                    onClick={() => {
-                      setSelectedCourse(course);
-                      setShowPlayer(true);
-                    }}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-                  >
-                    <Play size={18} fill="white" />
-                    تفضل شاهد
-                  </button>
-                </div>
+            {course.category && (
+              <div className="flex items-center justify-between text-gray-700">
+                <span>التصنيف:</span>
+                <span className="text-sm">{course.category.name}</span>
               </div>
-            );
-          })}
+            )}
+
+            {userCourse.purchasedAt && (
+              <div className="flex items-center justify-between text-gray-600 text-xs">
+                <Clock size={14} />
+                <span>
+                  {new Date(userCourse.purchasedAt).toLocaleDateString("ar-EG")}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Watch Button */}
+          <button
+            onClick={() => {
+              setSelectedCourse(course);
+              setShowPlayer(true);
+            }}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
+          >
+            <Play size={18} fill="white" />
+            تفضل شاهد
+          </button>
         </div>
       </div>
+      );
+          })}
     </div>
+      </div >
+    </div >
   );
 }

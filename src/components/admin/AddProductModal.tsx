@@ -1,9 +1,9 @@
-﻿
-import React, { useState } from "react";
-import { Upload, X, Play, CheckCircle2 } from "lucide-react";
+﻿import React, { useState, useEffect } from "react";
+import { Upload, X, Play, CheckCircle2, Plus } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
 import { QuizEditor, QuizData } from "./QuizEditor";
 import { CurriculumEditor, Section } from "./CurriculumEditor";
+import axios from "axios";
 
 export const AddProductModal = ({
   show = true,
@@ -21,6 +21,14 @@ export const AddProductModal = ({
   const [videoName, setVideoName] = useState(null);
   const [toast, setToast] = useState(null);
 
+  // Category State
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryImage, setNewCategoryImage] = useState(null);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+
   // Curriculum State
   const [whatWillYouLearn, setWhatWillYouLearn] = useState<string[]>([]);
   const [curriculum, setCurriculum] = useState<Section[]>([]);
@@ -29,8 +37,27 @@ export const AddProductModal = ({
   const [quizData, setQuizData] = useState<QuizData>({
     title: "",
     questions: [],
+    duration: 10,
+    difficulty: "beginner",
   });
   const [showQuizEditor, setShowQuizEditor] = useState(false);
+
+  useEffect(() => {
+    if (show) {
+      fetchCategories();
+    }
+  }, [show]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(res.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   if (!show) return null;
 
@@ -56,6 +83,38 @@ export const AddProductModal = ({
     }
   };
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      showToast("يرجى إدخال اسم الفئة", "destructive");
+      return;
+    }
+
+    setCreatingCategory(true);
+    const fd = new FormData();
+    fd.append("name", newCategoryName);
+    if (newCategoryImage) {
+      fd.append("image", newCategoryImage);
+    }
+
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/v1/categories`, fd, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const newCat = res.data.data;
+      setCategories([...categories, newCat]);
+      setSelectedCategory(newCat._id);
+      setShowAddCategory(false);
+      setNewCategoryName("");
+      setNewCategoryImage(null);
+      showToast("تم إنشاء الفئة بنجاح", "success");
+    } catch (error: any) {
+      showToast(error.response?.data?.message || "فشل إنشاء الفئة", "destructive");
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
+
   const handleAddProduct = async () => {
     if (!title || title.length < 3) {
       showToast("العنوان يجب أن يكون 3 أحرف على الأقل", "destructive");
@@ -69,6 +128,11 @@ export const AddProductModal = ({
 
     if (!price || parseFloat(price) <= 0) {
       showToast("أدخل سعر صحيح", "destructive");
+      return;
+    }
+
+    if (!selectedCategory) {
+      showToast("يرجى اختيار الفئة", "destructive");
       return;
     }
 
@@ -89,7 +153,7 @@ export const AddProductModal = ({
         return;
       }
       for (const q of quizData.questions) {
-        if (!q.question || !q.correctAnswer) {
+        if (!q.question || q.correctAnswer === undefined || q.correctAnswer === null) {
           showToast("يرجى إكمال جميع بيانات الأسئلة", "destructive");
           return;
         }
@@ -106,9 +170,14 @@ export const AddProductModal = ({
       fd.append("description", description.trim());
       fd.append("quantity", "1");
       fd.append("price", price);
-      fd.append("category", "691f6bd063a0a3709983d118");
+      fd.append("category", selectedCategory);
       fd.append("imageCover", imageCover);
       fd.append("videos", video);
+
+      const instructorId = localStorage.getItem("userId");
+      if (instructorId) {
+        fd.append("instructor", instructorId);
+      }
 
       // Append curriculum data
       if (whatWillYouLearn.length > 0) {
@@ -152,10 +221,12 @@ export const AddProductModal = ({
           title: quizData.title,
           product: newProductId,
           questions: quizData.questions,
-          // createdBy is usually handled by backend from token, but sending if needed
+          duration: quizData.duration || 10,
+          difficulty: quizData.difficulty || 'beginner',
+          createdBy: localStorage.getItem("userId"),
         };
 
-        const quizRes = await fetch(`${API_BASE_URL} /api/v1 / quizzes`, {
+        const quizRes = await fetch(`${API_BASE_URL}/api/v1/quizzes`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -187,6 +258,7 @@ export const AddProductModal = ({
       setCurriculum([]);
       setQuizData({ title: "", questions: [] });
       setShowQuizEditor(false);
+      setSelectedCategory("");
 
       fetchProducts();
       setTimeout(() => onClose(), 1500);
@@ -202,7 +274,7 @@ export const AddProductModal = ({
       <div className="w-full max-w-3xl p-6 shadow-xl max-h-[90vh] overflow-y-auto bg-white rounded-lg">
         {/* Toast Notification */}
         {toast && (
-          <div className={`fixed top - 4 left - 1 / 2 transform - translate - x - 1 / 2 px - 6 py - 3 rounded - lg shadow - lg z - [60] flex items - center gap - 2 ${toast.variant === "destructive" ? "bg-red-500 text-white" : "bg-green-500 text-white"
+          <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-[60] flex items-center gap-2 ${toast.variant === "destructive" ? "bg-red-500 text-white" : "bg-green-500 text-white"
             } `}>
             {toast.variant !== "destructive" && <CheckCircle2 size={20} />}
             <span className="font-medium">{toast.title}</span>
@@ -231,6 +303,70 @@ export const AddProductModal = ({
               placeholder="أدخل عنوان الكورس"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              الفئة <span className="text-red-500">*</span>
+            </label>
+
+            {!showAddCategory ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddCategory(true)}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition flex items-center gap-1"
+                  type="button"
+                >
+                  <Plus size={18} />
+                  جديد
+                </button>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  dir="rtl"
+                >
+                  <option value="">اختر الفئة</option>
+                  {categories.map((cat: any) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 animate-in fade-in zoom-in duration-200">
+                <div className="flex justify-between items-center mb-3">
+                  <button
+                    onClick={() => setShowAddCategory(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                    type="button"
+                  >
+                    <X size={18} />
+                  </button>
+                  <h4 className="font-medium text-gray-800">إنشاء فئة جديدة</h4>
+                </div>
+                <div className="space-y-3">
+                  <input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="اسم الفئة الجديدة"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCreateCategory}
+                      disabled={creatingCategory}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                      type="button"
+                    >
+                      {creatingCategory ? "جاري الإنشاء..." : "حفظ الفئة"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

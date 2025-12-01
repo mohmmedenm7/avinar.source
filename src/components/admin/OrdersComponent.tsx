@@ -24,6 +24,11 @@ interface Order {
   };
   isPaid?: boolean;
   paymentReceipt?: string;
+  coupon?: {
+    _id: string;
+    name: string;
+    discount: number;
+  } | string;
 }
 
 interface Props {
@@ -44,6 +49,7 @@ export const OrdersComponent = ({
   const [localOrders, setLocalOrders] = useState<Order[]>(orders);
 
   React.useEffect(() => {
+    console.log("Orders received in OrdersComponent:", orders);
     setLocalOrders(orders);
   }, [orders]);
 
@@ -184,8 +190,8 @@ export const OrdersComponent = ({
                 <p className="text-xs text-gray-600 font-medium mb-1">الحالة</p>
                 <span
                   className={`inline-block px-3 py-1 text-xs font-medium rounded transition-colors ${order.isPaid
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-yellow-100 text-yellow-700"
                     }`}
                 >
                   {order.isPaid ? "✓ مدفوع" : "⏳ قيد الانتظار"}
@@ -239,6 +245,21 @@ export const OrdersComponent = ({
                         عرض الصورة
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Coupon Info */}
+              {order.coupon && (
+                <div className="md:w-1/3">
+                  <p className="text-xs text-gray-600 font-medium mb-2">الكوبون المستخدم:</p>
+                  <div className="bg-blue-50 border border-blue-100 p-2 rounded text-xs">
+                    <p className="font-bold text-blue-700">
+                      {typeof order.coupon === 'string' ? order.coupon : order.coupon.name}
+                    </p>
+                    {typeof order.coupon !== 'string' && order.coupon.discount && (
+                      <p className="text-blue-600">خصم: {order.coupon.discount}%</p>
+                    )}
                   </div>
                 </div>
               )}

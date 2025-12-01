@@ -5,19 +5,28 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { getImageUrl } from "@/utils/imageUtils";
 import { CurriculumEditor, Section } from "./CurriculumEditor";
+import { QuizEditor, QuizData } from "./QuizEditor";
 
 const FIXED_QUANTITY = "1";
-const FIXED_CATEGORY = "691f6bd063a0a3709983d118";
 
 export const EditProductModal = ({ product, formData, setFormData, setEditingProduct, fetchProducts, token }) => {
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState(null);
   const [videoName, setVideoName] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   // Curriculum State
   const [whatWillYouLearn, setWhatWillYouLearn] = useState<string[]>([]);
   const [curriculum, setCurriculum] = useState<Section[]>([]);
+
+  // Quiz State
+  const [quizData, setQuizData] = useState<QuizData>({
+    title: "",
+    questions: [],
+  });
+  const [showQuizEditor, setShowQuizEditor] = useState(false);
+  const [existingQuizId, setExistingQuizId] = useState<string | null>(null);
 
   useEffect(() => {
     if (product) {
@@ -34,8 +43,72 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
       if (product.whatWillYouLearn) {
         setWhatWillYouLearn(product.whatWillYouLearn);
       }
+
+      // Initialize Category
+      if (product.category) {
+        const categoryId = typeof product.category === 'object' ? product.category._id : product.category;
+        setFormData(prev => ({ ...prev, category: categoryId }));
+      }
+
+      // Fetch Quiz
+      fetchQuiz(product._id);
     }
+    fetchCategories();
   }, [product]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCategories(res.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchQuiz = async (productId: string) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/products/${productId}/quizzes`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Assuming the API returns an array of quizzes or a single quiz object
+      // Based on typical REST patterns, it might be an array.
+      // If it returns { data: [quiz1, quiz2] } or { data: quiz }
+      const quizzes = res.data?.data;
+
+      if (Array.isArray(quizzes) && quizzes.length > 0) {
+        const quiz = quizzes[0]; // Take the first quiz for now
+        setQuizData({
+          title: quiz.title,
+          questions: quiz.questions || [],
+          duration: quiz.duration,
+          difficulty: quiz.difficulty,
+        });
+        setExistingQuizId(quiz._id);
+        setShowQuizEditor(true);
+      } else if (quizzes && !Array.isArray(quizzes)) {
+        // Single object case
+        setQuizData({
+          title: quizzes.title,
+          questions: quizzes.questions || [],
+          duration: quizzes.duration,
+          difficulty: quizzes.difficulty,
+        });
+        setExistingQuizId(quizzes._id);
+        setShowQuizEditor(true);
+      } else {
+        // No quiz found
+        setQuizData({ title: "", questions: [] });
+        setExistingQuizId(null);
+        setShowQuizEditor(false);
+      }
+    } catch (error) {
+      console.error("Error fetching quiz:", error);
+      // Don't show error toast here as it might just mean no quiz exists
+    }
+  };
 
   const renderText = (value) => {
     if (!value) return "";
@@ -69,12 +142,42 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
 
   const handleSaveEdit = async () => {
     setSaving(true);
+    console.log("Starting handleSaveEdit");
+    console.log("Product ID:", product._id);
+    console.log("Existing Quiz ID:", existingQuizId);
+    console.log("Quiz Data:", quizData);
+
+    // Validate Quiz if enabled
+    if (showQuizEditor && quizData.title) {
+      if (quizData.questions.length === 0) {
+        toast({ title: "يرجى إضافة سؤال واحد على الأقل للاختبار", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+      for (const q of quizData.questions) {
+        if (!q.question || q.correctAnswer === undefined || q.correctAnswer === null) {
+          toast({ title: "يرجى إكمال جميع بيانات الأسئلة", variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+      }
+    }
+
     const fd = new FormData();
     fd.append("title", renderText(formData.title));
     fd.append("description", renderText(formData.description));
     fd.append("quantity", FIXED_QUANTITY);
     fd.append("price", String(formData.price ?? 0));
-    fd.append("category", FIXED_CATEGORY);
+
+    if (formData.category) {
+      fd.append("category", formData.category);
+    }
+
+    // Append instructor (preserve existing or use current user)
+    const instructorId = product.instructor?._id || product.instructor || localStorage.getItem("userId");
+    if (instructorId) {
+      fd.append("instructor", instructorId);
+    }
 
     // Append Image if it's a File (newly selected)
     if (formData.imageCover instanceof File) {
@@ -106,14 +209,57 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
     }
 
     try {
+      // 1. Update Product
+      console.log("Sending Product Update...");
       await axios.put(`${API_BASE_URL}/api/v1/products/${product._id}`, fd, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      toast({ title: "✓ تم تعديل الكورس بنجاح" });
+      console.log("Product Update Success");
+
+      // 2. Update or Create Quiz
+      if (showQuizEditor && quizData.title) {
+        const quizPayload = {
+          title: quizData.title,
+          product: product._id,
+          questions: quizData.questions,
+          duration: quizData.duration || 10, // Default to 10 if missing
+          difficulty: quizData.difficulty || 'beginner',
+          createdBy: localStorage.getItem("userId"),
+        };
+        console.log("Quiz Payload:", JSON.stringify(quizPayload, null, 2));
+
+        if (existingQuizId) {
+          // Update existing quiz
+          console.log("Updating Existing Quiz:", existingQuizId);
+          await axios.put(`${API_BASE_URL}/api/v1/quizzes/${existingQuizId}`, quizPayload, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+          });
+          console.log("Quiz Update Success");
+        } else {
+          // Create new quiz
+          console.log("Creating New Quiz");
+          await axios.post(`${API_BASE_URL}/api/v1/quizzes`, quizPayload, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+          });
+          console.log("Quiz Creation Success");
+        }
+      }
+
+      toast({ title: "✓ تم تعديل الكورس والاختبار بنجاح" });
       setEditingProduct(null);
       fetchProducts();
     } catch (err: any) {
-      console.error(err);
+      console.error("Error in handleSaveEdit:", err);
+      if (err.response) {
+        console.error("Response Data:", JSON.stringify(err.response.data, null, 2));
+        console.error("Response Status:", err.response.status);
+      }
       toast({ title: err.response?.data?.message || "فشل تعديل الكورس", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -141,6 +287,23 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
               onChange={(e) => handleInputChange("title", e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">الفئة</label>
+            <select
+              value={formData.category || ""}
+              onChange={(e) => handleInputChange("category", e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none"
+              dir="rtl"
+            >
+              <option value="">اختر الفئة</option>
+              {categories.map((cat: any) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -229,6 +392,23 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
               curriculum={curriculum}
               setCurriculum={setCurriculum}
             />
+          </div>
+
+          {/* Quiz Editor */}
+          <div className="pt-4 border-t">
+            <label className="flex items-center gap-2 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={showQuizEditor}
+                onChange={(e) => setShowQuizEditor(e.target.checked)}
+                className="w-5 h-5 rounded text-blue-600"
+              />
+              <span className="font-semibold text-gray-700">تعديل/إضافة اختبار</span>
+            </label>
+
+            {showQuizEditor && (
+              <QuizEditor quizData={quizData} setQuizData={setQuizData} />
+            )}
           </div>
 
         </div>

@@ -7,12 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export interface Question {
     question: string;
     options: string[];
-    correctAnswer: string;
+    correctAnswer: number;
 }
 
 export interface QuizData {
     title: string;
     questions: Question[];
+    duration?: number;
+    difficulty?: string;
 }
 
 interface QuizEditorProps {
@@ -26,7 +28,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ quizData, setQuizData })
             ...quizData,
             questions: [
                 ...quizData.questions,
-                { question: "", options: ["", "", "", ""], correctAnswer: "" },
+                { question: "", options: ["", "", "", ""], correctAnswer: 0 },
             ],
         });
     };
@@ -48,7 +50,7 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ quizData, setQuizData })
         setQuizData({ ...quizData, questions: newQuestions });
     };
 
-    const handleCorrectAnswerChange = (qIndex: number, value: string) => {
+    const handleCorrectAnswerChange = (qIndex: number, value: number) => {
         const newQuestions = [...quizData.questions];
         newQuestions[qIndex].correctAnswer = value;
         setQuizData({ ...quizData, questions: newQuestions });
@@ -61,13 +63,36 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ quizData, setQuizData })
                     <CardTitle className="text-xl font-bold">إعداد الاختبار (اختياري)</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">عنوان الاختبار</label>
-                        <Input
-                            value={quizData.title}
-                            onChange={(e) => setQuizData({ ...quizData, title: e.target.value })}
-                            placeholder="مثال: اختبار أساسيات Node.js"
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">عنوان الاختبار</label>
+                            <Input
+                                value={quizData.title}
+                                onChange={(e) => setQuizData({ ...quizData, title: e.target.value })}
+                                placeholder="مثال: اختبار أساسيات Node.js"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">المدة (بالدقائق)</label>
+                            <Input
+                                type="number"
+                                value={quizData.duration || ""}
+                                onChange={(e) => setQuizData({ ...quizData, duration: parseInt(e.target.value) || 0 })}
+                                placeholder="مثال: 30"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">مستوى الصعوبة</label>
+                            <select
+                                value={quizData.difficulty || "beginner"}
+                                onChange={(e) => setQuizData({ ...quizData, difficulty: e.target.value })}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none"
+                            >
+                                <option value="beginner">مبتدئ</option>
+                                <option value="intermediate">متوسط</option>
+                                <option value="advanced">متقدم</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -97,20 +122,20 @@ export const QuizEditor: React.FC<QuizEditorProps> = ({ quizData, setQuizData })
                                         {q.options.map((opt, oIndex) => (
                                             <div key={oIndex} className="flex items-center gap-2">
                                                 <div
-                                                    className={`w-6 h-6 rounded-full border flex items-center justify-center cursor-pointer transition-colors ${q.correctAnswer === opt && opt !== ""
-                                                            ? "bg-green-500 border-green-500 text-white"
-                                                            : "border-gray-300 hover:border-gray-400"
+                                                    className={`w-6 h-6 rounded-full border flex items-center justify-center cursor-pointer transition-colors ${q.correctAnswer === oIndex
+                                                        ? "bg-green-500 border-green-500 text-white"
+                                                        : "border-gray-300 hover:border-gray-400"
                                                         }`}
-                                                    onClick={() => handleCorrectAnswerChange(qIndex, opt)}
+                                                    onClick={() => handleCorrectAnswerChange(qIndex, oIndex)}
                                                     title="Click to set as correct answer"
                                                 >
-                                                    {q.correctAnswer === opt && opt !== "" && <CheckCircle2 size={14} />}
+                                                    {q.correctAnswer === oIndex && <CheckCircle2 size={14} />}
                                                 </div>
                                                 <Input
                                                     value={opt}
                                                     onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
                                                     placeholder={`الخيار ${oIndex + 1}`}
-                                                    className={q.correctAnswer === opt && opt !== "" ? "border-green-500 ring-1 ring-green-500" : ""}
+                                                    className={q.correctAnswer === oIndex ? "border-green-500 ring-1 ring-green-500" : ""}
                                                 />
                                             </div>
                                         ))}

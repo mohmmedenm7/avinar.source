@@ -1,11 +1,14 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ShoppingCart } from "lucide-react";
+import { Menu, X, ShoppingCart, Heart } from "lucide-react";
 import axios from "axios";
 import { API_BASE_URL } from '@/config/env';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const Navbar = () => {
+    const { t } = useTranslation();
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userEmail, setUserEmail] = useState("");
     const [role, setRole] = useState("");
@@ -33,7 +36,10 @@ const Navbar = () => {
 
     const fetchCartCount = async () => {
         const token = localStorage.getItem("token");
-        if (!token) {
+        const storedRole = localStorage.getItem("role");
+
+        // Don't fetch cart for admin users
+        if (!token || storedRole === "admin") {
             setCartItemsCount(0);
             return;
         }
@@ -44,9 +50,14 @@ const Navbar = () => {
             });
             const items = res.data?.data?.cartItems || [];
             setCartItemsCount(items.length);
-        } catch (error) {
-            console.error("Error fetching cart:", error);
-            setCartItemsCount(0);
+        } catch (error: any) {
+            if (error.response && error.response.status === 404) {
+                // Cart not found (empty)
+                setCartItemsCount(0);
+            } else {
+                console.error("Error fetching cart:", error);
+                setCartItemsCount(0);
+            }
         }
     };
 
@@ -79,10 +90,10 @@ const Navbar = () => {
     };
 
     const navLinks = [
-        { name: "Home", path: "/" },
-        { name: "Courses", path: "/courses" },
-        { name: "About", path: "/about" },
-        { name: "Contact", path: "/contact" },
+        { name: t('nav.home'), path: "/" },
+        { name: t('nav.courses'), path: "/courses" },
+        { name: t('nav.about'), path: "/about" },
+        { name: t('nav.contact'), path: "/contact" },
     ];
 
     return (
@@ -99,7 +110,7 @@ const Navbar = () => {
                         A
                     </div>
                     <span className={`text-2xl font-bold tracking-tight ${isScrolled ? "text-gray-900" : "text-gray-900"}`}>
-                        AVinar<span className="text-blue-600">.</span>
+                        {t('app.title')}<span className="text-blue-600">.</span>
                     </span>
                 </Link>
 
@@ -107,7 +118,7 @@ const Navbar = () => {
                 <div className="hidden md:flex items-center gap-8">
                     {navLinks.map((link) => (
                         <Link
-                            key={link.name}
+                            key={link.path}
                             to={link.path}
                             className={`text-sm font-medium transition-colors hover:text-blue-600 ${location.pathname === link.path ? "text-blue-600" : "text-gray-600"
                                 }`}
@@ -119,18 +130,28 @@ const Navbar = () => {
 
                 {/* Auth Buttons */}
                 <div className="hidden md:flex items-center gap-4">
+                    <LanguageSwitcher />
+
                     {isLoggedIn && (
-                        <Link
-                            to="/cart"
-                            className="relative p-2 text-gray-600 hover:text-sky-600 transition-colors"
-                        >
-                            <ShoppingCart size={24} />
-                            {cartItemsCount > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-sky-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                                    {cartItemsCount}
-                                </span>
-                            )}
-                        </Link>
+                        <>
+                            <Link
+                                to="/wishlist"
+                                className="relative p-2 text-gray-600 hover:text-red-500 transition-colors"
+                            >
+                                <Heart size={24} />
+                            </Link>
+                            <Link
+                                to="/cart"
+                                className="relative p-2 text-gray-600 hover:text-sky-600 transition-colors"
+                            >
+                                <ShoppingCart size={24} />
+                                {cartItemsCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-sky-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                        {cartItemsCount}
+                                    </span>
+                                )}
+                            </Link>
+                        </>
                     )}
                     {isLoggedIn ? (
                         <div className="flex items-center gap-4">
@@ -148,7 +169,7 @@ const Navbar = () => {
                                         else if (role === "user") navigate("/UserDashboard");
                                     }}
                                 >
-                                    Dashboard
+                                    {t('nav.dashboard')}
                                 </Button>
                             )}
 
@@ -157,19 +178,19 @@ const Navbar = () => {
                                 className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
                                 onClick={handleLogout}
                             >
-                                Logout
+                                {t('nav.logout')}
                             </Button>
                         </div>
                     ) : (
                         <>
                             <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Log in
+                                {t('nav.login')}
                             </Link>
                             <Button
                                 className="bg-black text-white hover:bg-gray-800 rounded-full px-6 font-semibold"
                                 onClick={() => navigate("/register")}
                             >
-                                Sign Up
+                                {t('nav.signup')}
                             </Button>
                         </>
                     )}
@@ -187,9 +208,12 @@ const Navbar = () => {
             {/* Mobile Menu */}
             {mobileMenuOpen && (
                 <div className="md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-gray-200 p-6 space-y-4 animate-in slide-in-from-top-5 shadow-lg">
+                    <div className="flex justify-end">
+                        <LanguageSwitcher />
+                    </div>
                     {navLinks.map((link) => (
                         <Link
-                            key={link.name}
+                            key={link.path}
                             to={link.path}
                             className="block text-lg font-medium text-gray-600 hover:text-blue-600"
                             onClick={() => setMobileMenuOpen(false)}
@@ -206,18 +230,18 @@ const Navbar = () => {
                                         else if (role === "manager") navigate("/InstructorDashboard");
                                         else if (role === "user") navigate("/UserDashboard");
                                     }}>
-                                        Dashboard
+                                        {t('nav.dashboard')}
                                     </Button>
                                 )}
-                                <Button variant="destructive" onClick={handleLogout}>Logout</Button>
+                                <Button variant="destructive" onClick={handleLogout}>{t('nav.logout')}</Button>
                             </>
                         ) : (
                             <>
                                 <Button variant="outline" className="w-full justify-center" onClick={() => navigate("/login")}>
-                                    Log in
+                                    {t('nav.login')}
                                 </Button>
                                 <Button className="w-full justify-center bg-blue-600 hover:bg-blue-700 text-white" onClick={() => navigate("/register")}>
-                                    Sign Up
+                                    {t('nav.signup')}
                                 </Button>
                             </>
                         )}

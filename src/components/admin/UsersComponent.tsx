@@ -8,6 +8,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  role?: string;
 }
 
 interface Props {
@@ -74,10 +75,18 @@ export const UsersComponent = ({
               <p className="text-sm text-gray-700 truncate">{user.email}</p>
             </div>
 
+            {/* User Role */}
+            <div>
+              <p className="text-xs text-gray-600 font-medium mb-1">النوع</p>
+              <p className="text-sm text-gray-700">
+                {user.role === "manager" ? "مدرب/أدمن" : "مستخدم"}
+              </p>
+            </div>
+
             {/* Actions */}
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end md:col-span-4 lg:col-span-1 lg:col-start-4">
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 px-4"
+                className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 px-4 w-full md:w-auto"
                 onClick={() => handleDeleteUser(user._id)}
               >
                 حذف
