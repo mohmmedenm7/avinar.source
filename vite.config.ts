@@ -7,23 +7,24 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-      allowedHosts: [
-      'myrtice-enterological-shantay.ngrok-free.dev'
-    ],
-    host: true, // مهم إذا كنت تستخدم ngrok
-  
+  host: true, // مهم إذا كنت تستخدم ngrok
+  port: 8080,
+  allowedHosts: [
+    'myrtice-enterological-shantay.ngrok-free.dev'
+  ],
+  headers: {
+    "Cross-Origin-Embedder-Policy": "require-corp",
+    "Cross-Origin-Opener-Policy": "same-origin",
   },
+},
   plugins: [
     react(),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+  alias: {
+    "@": path.resolve(__dirname, "./src"),
   },
+},
 }));

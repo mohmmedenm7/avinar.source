@@ -71,8 +71,10 @@ export default function VideoTools() {
             await ffmpeg.exec(['-i', 'input.mp4', '-vf', 'scale=-1:720', '-c:v', 'libx264', '-crf', '28', '-preset', 'fast', 'output.mp4']);
 
             const data = await ffmpeg.readFile('output.mp4');
-            const url = URL.createObjectURL(new Blob([data as Uint8Array], { type: 'video/mp4' }));
+            const binaryData = data instanceof Uint8Array ? data : new Uint8Array(data as any); // Ensure Uint8Array
+            const url = URL.createObjectURL(new Blob([binaryData], { type: 'video/mp4' }));
 
+            if (outputVideo) URL.revokeObjectURL(outputVideo); // Cleanup previous URL
             setOutputVideo(url);
             setMessage('تمت المعالجة بنجاح!');
             toast({ title: "نجاح", description: "تم ضغط الفيديو بنجاح" });
