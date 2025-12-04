@@ -32,7 +32,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "@/config/env";
 import { Button } from "@/components/ui/button";
+
 import { Card } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
 
 // ------------------- Interfaces -------------------
 interface User {
@@ -89,6 +91,7 @@ const AdminDashboard = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
+    const { t } = useTranslation();
 
     const [loadingUsers, setLoadingUsers] = useState(true);
     const [loadingProducts, setLoadingProducts] = useState(true);
@@ -301,7 +304,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <Box size={20} />
-                                المنتجات
+                                {t('dashboard.products')}
                             </button>
 
                             {/* Users */}
@@ -313,7 +316,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <Users size={20} />
-                                المستخدمين
+                                {t('dashboard.users')}
                             </button>
 
                             {/* Categories */}
@@ -325,7 +328,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <Folder size={20} />
-                                الفئات
+                                {t('dashboard.categories')}
                             </button>
 
                             {/* Subcategories */}
@@ -337,7 +340,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <FolderTree size={20} />
-                                الفئات الفرعية
+                                {t('dashboard.subCategories')}
                             </button>
 
                             {/* Coupons */}
@@ -349,7 +352,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <Ticket size={20} />
-                                الكوبونات
+                                {t('dashboard.coupons')}
                             </button>
 
                             {/* Analytics */}
@@ -361,7 +364,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <BarChart size={20} />
-                                التحليلات
+                                {t('dashboard.analytics')}
                             </button>
 
                             {/* All Students */}
@@ -373,7 +376,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <Users size={20} />
-                                جميع الطلاب
+                                {t('dashboard.allStudents')}
                             </button>
 
                             {/* All Courses */}
@@ -385,7 +388,7 @@ const AdminDashboard = () => {
                                     }`}
                             >
                                 <Database size={20} />
-                                جميع الكورسات
+                                {t('dashboard.allCourses')}
                             </button>
 
                             {/* Wishlist Navigate */}
@@ -394,7 +397,7 @@ const AdminDashboard = () => {
                                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50"
                             >
                                 <Heart size={20} />
-                                المفضلة
+                                {t('nav.wishlist')}
                             </button>
                         </nav>
                     </div>
@@ -406,7 +409,7 @@ const AdminDashboard = () => {
                             onClick={handleLogout}
                         >
                             <LogOut size={20} />
-                            تسجيل خروج
+                            {t('nav.logout')}
                         </Button>
                     </div>
                 </aside>
@@ -441,7 +444,7 @@ const AdminDashboard = () => {
                         {/* Orders */}
                         {activeTab === "orders" &&
                             (loadingOrders ? (
-                                <Loading text="جاري تحميل الطلبات..." />
+                                <Loading text={t('common.loading')} />
                             ) : errorOrders ? (
                                 <ErrorBox message={errorOrders} />
                             ) : (

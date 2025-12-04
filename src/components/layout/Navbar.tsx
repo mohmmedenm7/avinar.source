@@ -51,9 +51,22 @@ const Navbar = () => {
             const items = res.data?.data?.cartItems || [];
             setCartItemsCount(items.length);
         } catch (error: any) {
-            if (error.response && error.response.status === 404) {
-                // Cart not found (empty)
-                setCartItemsCount(0);
+            if (error.response) {
+                if (error.response.status === 404) {
+                    // Cart not found (empty)
+                    setCartItemsCount(0);
+                } else if (error.response.status === 403 || error.response.status === 401) {
+                    // Unauthorized or Forbidden - likely invalid token
+                    console.warn("Authentication failed while fetching cart. Clearing session.");
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("email");
+                    localStorage.removeItem("role");
+                    setIsLoggedIn(false);
+                    setCartItemsCount(0);
+                } else {
+                    console.error("Error fetching cart:", error);
+                    setCartItemsCount(0);
+                }
             } else {
                 console.error("Error fetching cart:", error);
                 setCartItemsCount(0);

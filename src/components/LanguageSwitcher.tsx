@@ -21,7 +21,7 @@ const LanguageSwitcher = () => {
             onClick={toggleLanguage}
             className="font-bold text-lg"
         >
-            {i18n.language === 'ar' ? 'English' : 'العربية'}
+            {i18n.language === 'ar' ? 'EN' : 'AR'}
         </Button>
     );
 };

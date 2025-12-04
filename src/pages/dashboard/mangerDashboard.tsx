@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { BookOpen, LogOut, Users, Search, LayoutDashboard, GraduationCap, ClipboardList, BarChart, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { BookOpen, LogOut, Users, Search, LayoutDashboard, GraduationCap, ClipboardList, BarChart, ChevronDown, ChevronUp, Sparkles, Image, FileVideo } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from '@/config/env';
 import { ProductsComponent } from "@/components/admin/ProductsComponent";
@@ -12,6 +12,8 @@ import InstructorStats from "@/components/instructor/InstructorStats";
 import PendingGrading from "@/components/instructor/PendingGrading";
 import CourseAnalytics from "@/components/instructor/CourseAnalytics";
 import AiCourseOutlineGenerator from "@/components/instructor/AiCourseOutlineGenerator";
+import PhotopeaEditor from "@/components/instructor/PhotopeaEditor";
+import VideoTools from "@/components/instructor/VideoTools";
 
 interface Course {
   _id: string;
@@ -229,6 +231,26 @@ export default function InstructorDashboard() {
                 <Sparkles size={20} />
                 مساعد AI
               </button>
+              <button
+                onClick={() => setActiveTab("photopea")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "photopea"
+                  ? "bg-green-50 text-green-600 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
+              >
+                <Image size={20} />
+                محرر الصور
+              </button>
+              <button
+                onClick={() => setActiveTab("video-tools")}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "video-tools"
+                  ? "bg-red-50 text-red-600 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
+              >
+                <FileVideo size={20} />
+                أدوات الفيديو
+              </button>
             </nav>
           </div>
 
@@ -306,6 +328,16 @@ export default function InstructorDashboard() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
+                </div>
+
+                {/* Products Component for Course Management */}
+                <div className="mb-8 border-b border-gray-100 pb-8">
+                  <ProductsComponent
+                    products={courses.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))}
+                    token={token}
+                    fetchProducts={fetchCourses}
+                    searchQuery={searchQuery}
+                  />
                 </div>
 
                 <div className="grid gap-4">
@@ -413,6 +445,25 @@ export default function InstructorDashboard() {
                   <h2 className="text-xl font-bold text-gray-800">مساعد الذكاء الاصطناعي</h2>
                 </div>
                 <AiCourseOutlineGenerator />
+              </div>
+            )}
+
+            {/* Photopea Editor Tab */}
+            {activeTab === "photopea" && (
+              <div className="space-y-6 h-full">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">محرر الصور</h2>
+                </div>
+                <div className="h-[800px] w-full border rounded-lg overflow-hidden">
+                  <PhotopeaEditor />
+                </div>
+              </div>
+            )}
+
+            {/* Video Tools Tab */}
+            {activeTab === "video-tools" && (
+              <div className="space-y-6">
+                <VideoTools />
               </div>
             )}
           </div>

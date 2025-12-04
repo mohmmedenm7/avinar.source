@@ -114,8 +114,8 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-signup-otp" element={<VerifySignupOTP />} />
                 <Route path="/AdminDashboard" element={<ProtectedAdminRoute />} />
-                <Route path="/instructordashboard" element={<ProtectedInstructorRoute />} />
-                <Route path="/userdashboard" element={<ProtectedUserRoute />} />
+                <Route path="/InstructorDashboard" element={<ProtectedInstructorRoute />} />
+                <Route path="/UserDashboard" element={<ProtectedUserRoute />} />
                 <Route path="/courses" element={<Courses />} />
                 <Route path="/cart" element={<ProtectedCartRoute />} /> {/* ✅ السلة */}
                 <Route path="/wishlist" element={<ProtectedWishlistRoute />} /> {/* قائمة الأمنيات */}

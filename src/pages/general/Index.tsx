@@ -1,21 +1,17 @@
 ﻿import { useState, useEffect, useRef } from "react";
-import {
-  ArrowRight,
-  Play,
-  Cpu,
-  Globe,
-  Users,
-  MessageSquare,
-  Zap,
-  Shield,
-  BarChart
-} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/config/env";
 import { getImageUrl } from "@/utils/imageUtils";
 import axios from "axios";
+import { ArrowRight, Play, Users } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import CampaignBanner from "@/components/campaigns/CampaignBanner";
+import FeaturesSection from "@/components/home/FeaturesSection";
+import FeaturedCoursesSection from "@/components/home/FeaturedCoursesSection";
+import PartnersSection from "@/components/home/PartnersSection";
+import CTASection from "@/components/home/CTASection";
 
 interface Course {
   _id: string;
@@ -33,6 +29,7 @@ const Index = () => {
   const [visitorCount, setVisitorCount] = useState(0);
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -91,6 +88,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-[#F3F4F6] text-gray-900 font-sans selection:bg-sky-500/30 overflow-x-hidden">
 
+      {/* Campaign Banner */}
+      <CampaignBanner />
+
       {/* Hero Section */}
       <header
         ref={heroRef}
@@ -118,7 +118,7 @@ const Index = () => {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 mb-8 shadow-sm hover:shadow-md transition-all cursor-default"
           >
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span className="text-sm font-medium text-gray-600">دورات الذكاء الاصطناعي الجديدة متاحة الآن</span>
+            <span className="text-sm font-medium text-gray-600">{t('home.hero.badge')}</span>
           </motion.div>
 
           <motion.h1
@@ -130,7 +130,7 @@ const Index = () => {
               transform: `translate(${mousePosition.x * -20}px, ${mousePosition.y * -20}px)`
             }}
           >
-            فكر بشكل أسرع مع <br />
+            {t('home.hero.title')} <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-sky-600">AVinar.source</span>
           </motion.h1>
 
@@ -140,8 +140,7 @@ const Index = () => {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="max-w-2xl mx-auto text-gray-600 text-lg md:text-xl mb-12 leading-relaxed"
           >
-            أتقن مهارات المستقبل مع منصتنا التعليمية المتقدمة.
-            انضم إلى آلاف الطلاب الذين يحولون مساراتهم المهنية من خلال التعليم المدعوم بالذكاء الاصطناعي.
+            {t('home.hero.subtitle')}
           </motion.p>
 
           <motion.div
@@ -155,7 +154,7 @@ const Index = () => {
               className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-sky-500/20"
               onClick={() => navigate("/register")}
             >
-              ابدأ مجاناً
+              {t('home.hero.startFree')}
             </Button>
             <Button
               variant="outline"
@@ -163,7 +162,7 @@ const Index = () => {
               className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 h-14 text-lg hover:scale-105 transition-transform bg-white"
               onClick={() => navigate("/courses")}
             >
-              تصفح الدورات
+              {t('home.hero.browseCourses')}
             </Button>
           </motion.div>
 
@@ -180,65 +179,19 @@ const Index = () => {
             <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-500 rounded-2xl blur opacity-20 animate-pulse"></div>
             <div className="relative bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-2 shadow-2xl transform transition-transform duration-200">
               <img
-                src="https://ui-avatars.com/api/?name=Dashboard&background=f3f4f6&color=333&size=800&length=1&font-size=0.1"
+                src="/images/background.png.jpg"
                 alt="Platform Preview"
                 className="w-full rounded-xl shadow-inner"
                 style={{ minHeight: '400px', objectFit: 'cover' }}
               />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-gray-400 font-mono">بيئة تعليمية تفاعلية</p>
-              </div>
+
             </div>
           </motion.div>
         </div>
       </header>
 
       {/* Features Grid */}
-      <section className="py-24 px-6 bg-white">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div
-            {...fadeInUp}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">مصممة للمستقبل</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              اختبر منصة تعليمية مصممة لتتكيف مع احتياجاتك ووتيرتك.
-            </p>
-          </motion.div>
-
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="grid md:grid-cols-3 gap-8"
-          >
-            {[
-              { icon: Zap, title: "سريع كالبرق", desc: "محسّن للسرعة والأداء." },
-              { icon: Shield, title: "آمن وخاص", desc: "بياناتك محمية بأمان على مستوى المؤسسات." },
-              { icon: BarChart, title: "تتبع التقدم", desc: "تحليلات مفصلة لمراقبة نموك." },
-              { icon: Globe, title: "مجتمع عالمي", desc: "تواصل مع متعلمين من جميع أنحاء العالم." },
-              { icon: Cpu, title: "مدعوم بالذكاء الاصطناعي", desc: "توصيات مخصصة مدعومة بالذكاء الاصطناعي." },
-              { icon: Users, title: "مرشدون خبراء", desc: "تعلم مباشرة من قادة الصناعة." }
-            ].map((feature, idx) => (
-              <motion.div
-                key={idx}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  show: { opacity: 1, y: 0 }
-                }}
-                className="p-6 rounded-2xl bg-gray-50 border border-gray-100 hover:border-sky-200 transition-all duration-300 group hover:-translate-y-2 hover:bg-white hover:shadow-xl"
-              >
-                <div className="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="text-sky-500" size={24} />
-                </div>
-                <h3 className="text-xl font-bold mb-2 text-gray-900">{feature.title}</h3>
-                <p className="text-gray-500 text-sm">{feature.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+      <FeaturesSection />
 
       {/* Featured Courses Section */}
       <section className="py-24 px-6 relative overflow-hidden bg-[#F3F4F6]">

@@ -11,7 +11,10 @@
         "login": "Login",
         "signup": "Sign Up",
         "logout": "Logout",
-        "dashboard": "Dashboard"
+        "dashboard": "Dashboard",
+        "community": "Community",
+        "cart": "Cart",
+        "wishlist": "Wishlist"
     },
     "common": {
         "loading": "Loading...",
@@ -23,6 +26,70 @@
         "delete": "Delete",
         "edit": "Edit",
         "view": "View",
-        "search": "Search"
+        "search": "Search",
+        "students": "Students",
+        "price": "Price"
+    },
+    "home": {
+        "hero": {
+            "badge": "New AI Courses Available Now",
+            "title": "Think Faster with",
+            "subtitle": "Master the skills of the future with our advanced learning platform. Join thousands of students transforming their careers through AI-powered education.",
+            "startFree": "Start Free",
+            "browseCourses": "Browse Courses"
+        },
+        "features": {
+            "title": "Built for the Future",
+            "subtitle": "Experience a learning platform designed to adapt to your needs and pace.",
+            "fast": "Lightning Fast",
+            "fastDesc": "Optimized for speed and performance.",
+            "secure": "Secure & Private",
+            "secureDesc": "Your data is protected with enterprise-level security.",
+            "progress": "Track Progress",
+            "progressDesc": "Detailed analytics to monitor your growth.",
+            "global": "Global Community",
+            "globalDesc": "Connect with learners from around the world.",
+            "ai": "AI-Powered",
+            "aiDesc": "Personalized recommendations powered by AI.",
+            "experts": "Expert Mentors",
+            "expertsDesc": "Learn directly from industry leaders."
+        },
+        "courses": {
+            "title": "Featured Courses",
+            "subtitle": "Explore our most popular learning paths.",
+            "viewAll": "View All Courses",
+            "viewCourse": "View Course",
+            "course": "Course"
+        },
+        "partners": {
+            "title": "Our Success Partners",
+            "subtitle": "We are proud to collaborate with the best companies and educational institutions",
+            "partners": "Educational Partner",
+            "activeStudents": "Active Students",
+            "satisfaction": "Satisfaction Rate"
+        },
+        "cta": {
+            "title": "Ready to Start Your Journey?",
+            "subtitle": "Join thousands building the future with AVinar.",
+            "startNow": "Start Now"
+        }
+    },
+    "dashboard": {
+        "overview": "Overview",
+        "courses": "Manage Courses",
+        "students": "Enrolled Students",
+        "grading": "Pending Grading",
+        "aiAssistant": "AI Assistant",
+        "allCourses": "All Courses",
+        "manageAllCourses": "Manage All Courses",
+        "analytics": "Analytics",
+        "users": "Users",
+        "products": "Products",
+        "orders": "Orders",
+        "coupons": "Coupons",
+        "categories": "Categories",
+        "subCategories": "Subcategories",
+        "allStudents": "All Students",
+        "platformStats": "Platform Statistics"
     }
 }
