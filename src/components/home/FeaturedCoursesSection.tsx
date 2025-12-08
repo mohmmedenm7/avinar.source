@@ -48,8 +48,8 @@ const FeaturedCoursesSection = ({ courses, loading }: FeaturedCoursesProps) => {
                     className="flex justify-between items-end mb-12"
                 >
                     <div>
-                        <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">الدورات المميزة</h2>
-                        <p className="text-gray-500">استكشف مساراتنا التعليمية الأكثر شعبية.</p>
+                        <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900">أحدث الدورات</h2>
+                        <p className="text-gray-500">استكشف أحدث الدورات المضافة لدينا.</p>
                     </div>
                     <Link to="/courses" className="hidden md:flex items-center gap-2 text-sky-500 hover:text-sky-600 transition-colors group font-medium">
                         عرض جميع الدورات <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+// Routes and Contexts
 import { AuthProvider } from "@/contexts/AuthContext";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
@@ -27,10 +28,16 @@ import About from "./pages/general/About";
 import CommunityPage from "./pages/CommunityPage";
 import PostDetail from "./pages/PostDetail";
 import Contact from "./pages/general/Contact";
+import Privacy from "./pages/general/Privacy";
+import Terms from "./pages/general/Terms";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyResetCode from "./pages/auth/VerifyResetCode";
 import ResetPassword from "./pages/auth/ResetPassword";
 import VerifySignupOTP from "./pages/auth/VerifySignupOTP";
+import WorkOSCallback from "./pages/auth/WorkOSCallback";
+import MicrosoftCallback from "./pages/auth/MicrosoftCallback";
+import GoogleCallback from "./pages/auth/GoogleCallback";
+import AppleCallback from "./pages/auth/AppleCallback";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +120,10 @@ const App = () => (
                 <Route path="/verify-reset-code" element={<VerifyResetCode />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-signup-otp" element={<VerifySignupOTP />} />
+                <Route path="/auth/workos/callback" element={<WorkOSCallback />} />
+                <Route path="/auth/microsoft/callback" element={<MicrosoftCallback />} />
+                <Route path="/auth/google/callback" element={<GoogleCallback />} />
+                <Route path="/auth/apple/callback" element={<AppleCallback />} />
                 <Route path="/AdminDashboard" element={<ProtectedAdminRoute />} />
                 <Route path="/InstructorDashboard" element={<ProtectedInstructorRoute />} />
                 <Route path="/UserDashboard" element={<ProtectedUserRoute />} />
@@ -130,6 +141,8 @@ const App = () => (
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/community" element={<CommunityPage />} />
                 <Route path="/community/:postId" element={<PostDetail />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -172,13 +172,13 @@ const Navbar = () => {
                                 {userEmail.split('@')[0]}
                             </span>
 
-                            {(role === "admin" || role === "manager" || role === "user") && (
+                            {(role === "admin" || role === "manager" || role === "instructor" || role === "user") && (
                                 <Button
                                     variant="ghost"
                                     className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                                     onClick={() => {
                                         if (role === "admin") navigate("/AdminDashboard");
-                                        else if (role === "manager") navigate("/InstructorDashboard");
+                                        else if (role === "manager" || role === "instructor") navigate("/InstructorDashboard");
                                         else if (role === "user") navigate("/UserDashboard");
                                     }}
                                 >
