@@ -10,6 +10,7 @@ import { API_BASE_URL } from '@/config/env';
 interface UdemyLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 export default function UdemyLinkModal({ isOpen, onClose }: UdemyLinkModalProps) {

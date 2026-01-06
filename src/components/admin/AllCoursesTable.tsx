@@ -1,5 +1,6 @@
-import { BookOpen, Users, TrendingUp } from "lucide-react";
+import { BookOpen, Users, TrendingUp, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface Course {
     _id: string;
@@ -19,6 +20,7 @@ interface AllCoursesTableProps {
 }
 
 const AllCoursesTable = ({ courses, loading = false }: AllCoursesTableProps) => {
+    const navigate = useNavigate();
     if (loading) {
         return (
             <div className="flex justify-center py-12">
@@ -46,7 +48,8 @@ const AllCoursesTable = ({ courses, loading = false }: AllCoursesTableProps) => 
                         <th className="px-6 py-3">عدد الطلاب</th>
                         <th className="px-6 py-3">معدل الإنجاز</th>
                         <th className="px-6 py-3">السعر</th>
-                        <th className="px-6 py-3 rounded-l-lg">آخر تحديث</th>
+                        <th className="px-6 py-3">آخر تحديث</th>
+                        <th className="px-6 py-3 rounded-l-lg text-center">معاينة</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -82,6 +85,15 @@ const AllCoursesTable = ({ courses, loading = false }: AllCoursesTableProps) => 
                                     })
                                     : 'غير متاح'
                                 }
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                                <button
+                                    onClick={() => navigate(`/course/${course._id}`)}
+                                    className="p-2 hover:bg-blue-50 text-blue-600 rounded-full transition-colors"
+                                    title="معاينة الكورس"
+                                >
+                                    <Eye size={18} />
+                                </button>
                             </td>
                         </tr>
                     ))}

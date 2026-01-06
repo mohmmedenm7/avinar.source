@@ -79,7 +79,7 @@ const InstructorStats = ({ stats, loading = false }: InstructorStatsProps) => {
                     <Award className="h-4 w-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-gray-900">{defaultStats.averageProgress}%</div>
+                    <div className="text-2xl font-bold text-gray-900">{Number(defaultStats.averageProgress).toFixed(2)}%</div>
                     <p className="text-xs text-gray-500 mt-1">
                         عبر جميع الكورسات
                     </p>

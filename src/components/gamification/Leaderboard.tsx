@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import axios from "axios";
 import { API_BASE_URL } from "@/config/env";
+import { Link } from "react-router-dom";
 
 interface LeaderboardUser {
     _id: string;
@@ -86,43 +87,54 @@ const Leaderboard = () => {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {leaders.map((user) => (
-                            <div
-                                key={user._id}
-                                className={`flex items-center justify-between p-3 rounded-lg ${user.isCurrentUser ? "bg-blue-50 border border-blue-100 ring-1 ring-blue-200" : "hover:bg-gray-50"
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div
-                                        className={`w-8 h-8 flex items-center justify-center font-bold rounded-full ${user.rank === 1
-                                            ? "bg-yellow-100 text-yellow-700"
-                                            : user.rank === 2
-                                                ? "bg-gray-100 text-gray-700"
-                                                : user.rank === 3
-                                                    ? "bg-orange-100 text-orange-700"
-                                                    : "text-gray-500"
-                                            }`}
-                                    >
-                                        {user.rank <= 3 ? <Medal size={16} /> : user.rank}
-                                    </div>
+                        {leaders.map((item: any, index) => {
+                            // Handle both flat and nested structure (for robustness)
+                            const user = item.user ? item.user : item;
+                            const xp = item.xp !== undefined ? item.xp : (user.xp || 0);
+                            const name = item.name || user.name || "مستخدم";
+                            const avatar = item.avatar || user.profileImg || user.avatar;
+                            const rank = item.rank || index + 1;
+                            const isMe = item.isCurrentUser;
+                            const userId = user._id;
 
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={user.avatar} />
-                                        <AvatarFallback>{user.name?.slice(0, 2) || "?"}</AvatarFallback>
-                                    </Avatar>
+                            return (
+                                <div
+                                    key={userId || index}
+                                    className={`flex items-center justify-between p-3 rounded-lg ${isMe ? "bg-blue-50 border border-blue-100 ring-1 ring-blue-200" : "hover:bg-gray-50 transition-colors"
+                                        }`}
+                                >
+                                    <Link to={`/profile/student/${userId}`} className="flex items-center gap-3 flex-1 group">
+                                        <div
+                                            className={`w-8 h-8 flex items-center justify-center font-bold rounded-full ${rank === 1
+                                                ? "bg-yellow-100 text-yellow-700"
+                                                : rank === 2
+                                                    ? "bg-gray-100 text-gray-700"
+                                                    : rank === 3
+                                                        ? "bg-orange-100 text-orange-700"
+                                                        : "text-gray-500"
+                                                }`}
+                                        >
+                                            {rank <= 3 ? <Medal size={16} /> : rank}
+                                        </div>
 
-                                    <div>
-                                        <p className={`text-sm font-medium ${user.isCurrentUser ? "text-blue-700" : "text-gray-900"}`}>
-                                            {user.name || "مستخدم"} {user.isCurrentUser && "(أنت)"}
-                                        </p>
+                                        <Avatar className="h-8 w-8 border border-white/50 group-hover:scale-110 transition-transform">
+                                            <AvatarImage src={avatar ? `${API_BASE_URL}/uploads/users/${avatar}` : ''} />
+                                            <AvatarFallback>{name?.slice(0, 2) || "?"}</AvatarFallback>
+                                        </Avatar>
+
+                                        <div>
+                                            <p className={`text-sm font-medium group-hover:text-primary transition-colors ${isMe ? "text-blue-700" : "text-gray-900"}`}>
+                                                {name} {isMe && "(أنت)"}
+                                            </p>
+                                        </div>
+                                    </Link>
+
+                                    <div className="text-sm font-bold text-gray-600">
+                                        {xp.toLocaleString()} XP
                                     </div>
                                 </div>
-
-                                <div className="text-sm font-bold text-gray-600">
-                                    {user.xp?.toLocaleString() || 0} XP
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </CardContent>
@@ -131,4 +143,5 @@ const Leaderboard = () => {
 };
 
 export default Leaderboard;
+
 

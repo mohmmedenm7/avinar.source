@@ -9,9 +9,14 @@ import {
   GraduationCap,
   User,
   LogOut,
-  Search,
+  Search as SearchIcon,
   Bell,
-  PlusCircle
+  ChevronRight,
+  LayoutDashboard,
+  PlusCircle,
+  MessageCircle,
+  Sparkles,
+  Video
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,15 +28,23 @@ import { API_BASE_URL } from "@/config/env";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/ui/badge";
 
 // Sub-components
 import GamificationDashboard from "@/components/gamification/GamificationDashboard";
 import DailyChallenges from "@/components/gamification/DailyChallenges";
+import MyBadges from "@/components/gamification/MyBadges";
 import Leaderboard from "@/components/gamification/Leaderboard";
 import ProgressOverview from "@/components/progress/ProgressOverview";
 import CourseProgress from "@/components/progress/CourseProgress";
 import QuizResults from "@/components/student/QuizResults";
 import AssignmentResults from "@/components/student/AssignmentResults";
+import { ChatButton } from "@/components/chat";
+import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
+import ProfileSettings from "@/components/dashboard/ProfileSettings";
+import { UserNotifications } from "@/components/dashboard/UserNotifications";
+import NotificationBell from "@/components/dashboard/NotificationBell";
+import StudentAiChat from "@/components/student/StudentAiChat";
 
 interface Product {
   _id: string;
@@ -54,6 +67,7 @@ const UserDashboard = () => {
   const [quizResults, setQuizResults] = useState<any[]>([]);
   const [assignmentResults, setAssignmentResults] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [allProgress, setAllProgress] = useState<any[]>([]);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -114,14 +128,16 @@ const UserDashboard = () => {
   const fetchStats = async () => {
     if (!token) return;
     try {
-      const [statsRes, quizRes, assignRes] = await Promise.all([
+      const [statsRes, quizRes, assignRes, progressRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/v1/student/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/api/v1/student/quiz-results`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/api/v1/student/assignment-results`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/api/v1/student/assignment-results`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/api/v1/student/progress`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setDashboardStats(statsRes.data?.data || statsRes.data);
       setQuizResults(quizRes.data?.data || []);
       setAssignmentResults(assignRes.data?.data || []);
+      setAllProgress(progressRes.data?.data || []);
     } catch (e) { console.error(e) }
   }
 
@@ -144,17 +160,21 @@ const UserDashboard = () => {
       await axios.post(`${API_BASE_URL}/api/v1/users/requestUpgrade`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast({ title: "Request sent successfully", className: "bg-green-500 text-white" });
+      toast({ title: t('common.success'), className: "bg-green-500 text-white" });
       fetchUserProfile();
     } catch (error) {
-      toast({ title: "Error sending request", variant: "destructive" });
+      toast({ title: t('common.error'), variant: "destructive" });
     }
   };
 
   const menuItems = [
-    { id: "gamification", label: t('dashboard.gamification'), icon: <Trophy size={20} /> },
+    { id: "gamification", label: t('dashboard.gamification'), icon: <LayoutDashboard size={20} /> },
     { id: "purchased", label: t('dashboard.myCourses'), icon: <Library size={20} /> },
+    { id: "live", label: 'بث مباشر', icon: <Video size={20} /> },
     { id: "available", label: t('dashboard.explore'), icon: <ShoppingBag size={20} /> },
+    { id: "chat", label: t('dashboard.chat') || 'الرسائل', icon: <MessageCircle size={20} /> },
+    { id: "ai-chat", label: t('dashboard.aiAssistant') || 'المساعد الذكي', icon: <Sparkles size={20} /> },
+    { id: "notifications", label: t('dashboard.notifications') || 'الإشعارات', icon: <Bell size={20} /> },
     { id: "progress", label: t('dashboard.progress'), icon: <TrendingUp size={20} /> },
     { id: "quizzes", label: t('dashboard.quizzes'), icon: <GraduationCap size={20} /> },
     { id: "assignments", label: t('dashboard.assignments'), icon: <FileText size={20} /> },
@@ -162,165 +182,312 @@ const UserDashboard = () => {
     { id: "profile", label: t('dashboard.profile'), icon: <User size={20} /> },
   ];
 
+  const currentDir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr';
+
   return (
-    <div className="flex h-screen bg-[#F4F2EE] font-sans overflow-hidden pt-24" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
-      {/* Sidebar */}
-      <aside className="w-[280px] bg-[#1a1c1e] text-gray-400 flex flex-col m-4 rounded-[30px] shadow-2xl overflow-hidden relative">
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-3 mb-8 text-white">
-            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-              <span className="font-bold text-lg">S</span>
+    <div className="flex h-screen bg-[linear-gradient(135deg,#c3e7e3_0%,#dbe9f4_50%,#ebdcf0_100%)] font-sans overflow-hidden pt-20" dir={currentDir}>
+      {/* Side Main Wrapper for Glass Effect - Expanded to fill more screen */}
+      <div className="flex flex-1 m-1 sm:m-2 bg-white/40 backdrop-blur-2xl rounded-[24px] lg:rounded-[32px] shadow-2xl border border-white/50 overflow-hidden relative">
+
+        {/* Sidebar */}
+        <aside className="w-[280px] flex flex-col border-e border-white/30 bg-white/20 backdrop-blur-sm z-10">
+          <div className="p-8 pb-4">
+            <div className="flex items-center gap-3 mb-10 text-[#2D3748]">
+              <div className="w-10 h-10 bg-[#1A365D] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A365D]/20 transition-transform hover:scale-105">
+                <span className="font-bold text-white text-xl">V</span>
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">{t('app.title')}</h1>
             </div>
-            <h1 className="text-xl font-bold tracking-brand">{t('dashboard.student')}</h1>
+
+            <nav className="space-y-2 overflow-y-auto max-h-[calc(100vh-320px)] pe-2 custom-scrollbar">
+              {menuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={item.action ? item.action : () => setActiveTab(item.id)}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-[20px] transition-all duration-300 relative group overflow-hidden ${activeTab === item.id
+                    ? "bg-[#1A365D] text-white shadow-xl shadow-[#1A365D]/20 translate-x-1"
+                    : "text-[#4A5568] hover:bg-white/40 hover:text-[#2D3748]"
+                    }`}
+                >
+                  <span className={`transition-colors duration-300 ${activeTab === item.id ? "text-white" : "group-hover:text-[#1A365D]"}`}>
+                    {item.icon}
+                  </span>
+                  <span className="font-semibold text-[15px]">{item.label}</span>
+                  {activeTab === item.id && (
+                    <div className="absolute end-4 w-1.5 h-1.5 bg-white rounded-full"></div>
+                  )}
+                </button>
+              ))}
+            </nav>
+
+            {userProfile?.role === "user" && !userProfile?.upgradeRequested && (
+              <div className="mt-8 p-5 bg-[#EBF8FF] rounded-[24px] border border-[#BEE3F8]">
+                <h4 className="text-[#2C5282] font-bold text-sm mb-2">{t('dashboard.becomeInstructor')}</h4>
+                <p className="text-[#4299E1] text-[11px] mb-4">Start sharing your knowledge with the world.</p>
+                <Button
+                  onClick={handleRequestUpgrade}
+                  className="w-full bg-[#3182CE] hover:bg-[#2B6CB0] text-white rounded-xl py-2 flex items-center justify-center gap-2 font-bold shadow-md shadow-[#3182CE]/20 transition-all active:scale-95 text-xs"
+                >
+                  <PlusCircle size={16} />
+                  <span>{t('common.save')}</span>
+                </Button>
+              </div>
+            )}
           </div>
 
-          {userProfile?.role === "user" && !userProfile?.upgradeRequested && (
+          <div className="mt-auto p-8 border-t border-white/30">
             <button
-              onClick={handleRequestUpgrade}
-              className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium transition-transform active:scale-95 shadow-lg shadow-green-500/30 mb-8 text-sm"
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between group text-[#718096] hover:text-[#E53E3E] transition-all p-3 rounded-xl hover:bg-red-50/50"
             >
-              <GraduationCap size={18} />
-              <span>{t('dashboard.becomeInstructor')}</span>
+              <div className="flex items-center gap-3">
+                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
+                <span className="font-bold">{t('dashboard.logout')}</span>
+              </div>
+              <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-all" />
             </button>
-          )}
-
-          {userProfile?.upgradeRequested && (
-            <div className="mb-8 p-3 bg-white/10 rounded-xl text-center">
-              <p className="text-yellow-400 text-sm font-medium">{t('dashboard.requestPending')}</p>
-            </div>
-          )}
-
-          <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={item.action ? item.action : () => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 ${activeTab === item.id
-                  ? "bg-white text-black shadow-lg font-semibold translate-x-1"
-                  : "hover:bg-white/5 hover:text-gray-200"
-                  }`}
-              >
-                <span className={activeTab === item.id ? "text-green-500" : ""}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="mt-auto p-6 border-t border-white/10 mx-6 mb-2">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 text-gray-400 hover:text-red-400 transition-colors"
-          >
-            <LogOut size={20} />
-            <span>{t('dashboard.logout')}</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden p-4 pr-0">
-        <header className="flex items-center justify-between px-8 py-4 mb-2">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.overview')}</h2>
-            <p className="text-gray-500 text-sm">{t('dashboard.keepLearning')}</p>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-12 h-12 border-2 text-black border-white shadow-sm cursor-pointer">
-                <AvatarFallback>{userProfile?.name?.charAt(0) || "U"}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-bold text-gray-900">{userProfile?.name || "Student"}</p>
-                <p className="text-xs text-gray-500">{t('dashboard.role')}: {userProfile?.role || "User"}</p>
-              </div>
-            </div>
-          </div>
-        </header>
+        </aside>
 
-        <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
-          {activeTab === "gamification" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-8">
-                <GamificationDashboard stats={dashboardStats} />
-                <DailyChallenges />
-              </div>
-              <div>
-                <Leaderboard />
-              </div>
-            </div>
-          )}
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white/10">
 
-          {activeTab === "purchased" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {purchasedProducts.map((product) => (
-                <Card key={product._id} className="border-none shadow-sm rounded-[24px] overflow-hidden hover:shadow-md transition-all h-full">
-                  <img src={getImageUrl(product.imageCover)} alt={product.title} className="w-full h-48 object-cover" />
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-lg mb-2">{product.title}</h3>
-                    <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" onClick={() => navigate(`/course/${product._id}`)}>
-                      {t('common.view')}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+          {/* Header */}
+          <header className="flex items-center justify-between ps-10 pe-12 py-8 bg-white/20 backdrop-blur-md border-b border-white/30">
+            <div className="space-y-1">
+              <h4 className="text-[#3182ce] text-sm font-medium">
+                {t('dashboard.welcomeAdmin') || `Welcome back, ${userProfile?.name?.split(' ')[0]} 👋`}
+              </h4>
+              <h2 className="text-3xl font-extrabold text-[#2D3748] tracking-tight">
+                {menuItems.find(m => m.id === activeTab)?.label}
+              </h2>
             </div>
-          )}
 
-          {activeTab === "available" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {unpurchasedProducts.map((product) => (
-                <Card key={product._id} className="border-none shadow-sm rounded-[24px] overflow-hidden hover:shadow-md transition-all h-full">
-                  <img src={getImageUrl(product.imageCover)} alt={product.title} className="w-full h-48 object-cover" />
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-lg">{product.title}</h3>
-                      <span className="text-green-600 font-bold">${product.price}</span>
-                    </div>
-                    <Button className="w-full rounded-xl bg-blue-600 hover:bg-blue-700" onClick={() => navigate(`/course-details/${product._id}`)}>
-                      {t('common.view')}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {activeTab === "progress" && (
-            <div className="space-y-6">
-              <ProgressOverview
-                totalCourses={purchasedProducts.length}
-                completedCourses={1} // mock
-                totalLessons={45}
-                completedLessons={23}
-                totalMinutes={185}
-                averageProgress={51}
-              />
-              {purchasedProducts.map((p, i) => (
-                <CourseProgress
-                  key={p._id}
-                  courseId={p._id}
-                  courseTitle={p.title}
-                  courseImage={p.imageCover}
-                  completedLessons={5}
-                  totalLessons={10}
-                  totalMinutes={60}
-                  completedMinutes={30}
+            <div className="flex items-center gap-6">
+              {/* Search Mockup */}
+              <div className="hidden sm:flex items-center bg-white/40 backdrop-blur-md rounded-2xl px-4 py-2 border border-white/50 shadow-inner group transition-all focus-within:ring-2 focus-within:ring-[#3182ce]/30">
+                <SearchIcon size={18} className="text-[#718096] group-focus-within:text-[#3182ce]" />
+                <input
+                  type="text"
+                  placeholder={t('dashboard.searchPlaceholder')}
+                  className="bg-transparent border-none outline-none ps-3 text-sm text-[#4A5568] placeholder-[#A0AEC0] w-48"
                 />
-              ))}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ChatButton variant="support" className="hidden sm:flex" />
+
+                <NotificationBell onViewAll={() => setActiveTab('notifications')} />
+
+                <div className="flex items-center gap-3 ps-3 border-s border-white/40">
+                  <Avatar className="w-11 h-11 ring-2 ring-white ring-offset-2 ring-offset-[#dbe9f4] shadow-md border-none cursor-pointer transition-transform hover:scale-105 active:scale-95">
+                    <AvatarImage src={getImageUrl(userProfile?.avatar)} />
+                    <AvatarFallback className="bg-[#1A365D] text-white font-bold">{userProfile?.name?.charAt(0) || "U"}</AvatarFallback>
+                  </Avatar>
+                  <div className="hidden md:block">
+                    <p className="text-sm font-extrabold text-[#2D3748] leading-tight">{userProfile?.name || "Student"}</p>
+                    <p className="text-[11px] font-semibold text-[#718096] uppercase tracking-wider">{userProfile?.role || "Student"}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </header>
 
-          {activeTab === "quizzes" && (
-            <QuizResults results={quizResults} loading={false} />
-          )}
+          {/* Content Body */}
+          <main className="flex-1 overflow-y-auto ps-10 pe-12 py-10 custom-scrollbar">
 
-          {activeTab === "assignments" && (
-            <AssignmentResults results={assignmentResults} loading={false} />
-          )}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+              {activeTab === "gamification" && (
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                  <div className="xl:col-span-2 space-y-8">
+                    <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03]">
+                      <GamificationDashboard stats={dashboardStats} />
+                    </div>
+                    <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03]">
+                      <DailyChallenges />
+                    </div>
+                    <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03]">
+                      <MyBadges />
+                    </div>
+                  </div>
+                  <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03] h-fit">
+                    <Leaderboard />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "purchased" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {purchasedProducts.length > 0 ? purchasedProducts.map((product) => (
+                    <Card key={product._id} className="group border border-white/50 bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+                      <div className="relative h-56 overflow-hidden">
+                        <img
+                          src={getImageUrl(product.imageCover)}
+                          alt={product.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <Badge className="absolute top-4 start-4 bg-white/90 backdrop-blur text-[#2D3748] border-none font-bold">
+                          {t('dashboard.completed') || 'Enrolled'}
+                        </Badge>
+                      </div>
+                      <CardContent className="p-8">
+                        <h3 className="font-extrabold text-xl text-[#2D3748] mb-3 line-clamp-1">{product.title}</h3>
+                        <p className="text-[#718096] text-sm mb-6 line-clamp-2 leading-relaxed">
+                          {product.description || t('dashboard.keepLearning')}
+                        </p>
+                        <Button
+                          className="w-full rounded-[18px] bg-[#3182CE] hover:bg-[#2B6CB0] text-white font-bold h-12 shadow-lg shadow-[#3182CE]/20 transition-all active:scale-95"
+                          onClick={() => navigate(`/course/${product._id}`)}
+                        >
+                          {t('common.view')}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )) : (
+                    <div className="col-span-full py-20 text-center">
+                      <Library size={64} className="mx-auto text-white/30 mb-4" />
+                      <p className="text-[#718096] font-bold">{t('dashboard.noCoursesFound') || 'No courses purchased yet'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "live" && (
+                <div className="space-y-8">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <Video className="text-red-500" />
+                      المحاضرات المباشرة
+                    </h2>
+                  </div>
+                  {/* Since we have a dedicated page for live streams, we can either link to it or embed a list */}
+                  <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 text-center">
+                    <Video size={48} className="mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-xl font-bold mb-4 text-gray-700">شاهد المحاضرات المباشرة الآن</h3>
+                    <p className="text-gray-500 mb-6">انضم للمحاضرات التفاعلية مع مدربيك المفضلين</p>
+                    <Button
+                      className="bg-red-500 hover:bg-red-600 rounded-2xl h-12 px-8 font-bold"
+                      onClick={() => navigate('/live')}
+                    >
+                      استعراض جميع المحاضرات المباشرة
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "available" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {unpurchasedProducts.map((product) => (
+                    <Card key={product._id} className="group border border-white/50 bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
+                      <div className="relative h-56 overflow-hidden">
+                        <img
+                          src={getImageUrl(product.imageCover)}
+                          alt={product.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute top-4 end-4 bg-white/95 backdrop-blur rounded-[14px] px-3 py-1.5 shadow-lg border border-white/50">
+                          <span className="text-[#2F855A] font-extrabold text-lg">${product.price}</span>
+                        </div>
+                      </div>
+                      <CardContent className="p-8">
+                        <h3 className="font-extrabold text-xl text-[#2D3748] mb-3 line-clamp-1">{product.title}</h3>
+                        <p className="text-[#718096] text-sm mb-6 line-clamp-2 leading-relaxed italic opacity-80">
+                          {product.description || t('dashboard.keepLearning')}
+                        </p>
+                        <Button
+                          className="w-full rounded-[18px] bg-[#1A365D] hover:bg-[#2A4365] text-white font-bold h-12 shadow-lg shadow-[#1A365D]/20 transition-all active:scale-95"
+                          onClick={() => navigate(`/course-details/${product._id}`)}
+                        >
+                          {t('common.view')}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === "progress" && (
+                <div className="grid grid-cols-1 gap-8">
+                  <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-6 border border-white/50 shadow-xl shadow-black/[0.03]">
+                    <ProgressOverview
+                      totalCourses={allProgress.length}
+                      completedCourses={allProgress.filter(p => p.isCompleted).length}
+                      totalLessons={allProgress.reduce((acc, p) => acc + (p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.length, 0) || 0), 0)}
+                      completedLessons={allProgress.reduce((acc, p) => acc + (p.completedLessons?.length || 0), 0)}
+                      totalMinutes={allProgress.reduce((acc, p) => acc + (p.timeSpent || 0), 0)}
+                      averageProgress={allProgress.length > 0 ? Math.round(allProgress.reduce((acc, p) => acc + (p.completionPercentage || 0), 0) / allProgress.length) : 0}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {allProgress.map((p) => (
+                      <div key={p._id} className="bg-white/40 backdrop-blur-md rounded-[32px] p-4 border border-white/50 shadow-lg shadow-black/[0.02] hover:bg-white/60 transition-colors">
+                        <CourseProgress
+                          courseId={p.product?._id}
+                          courseTitle={p.product?.title || "Course"}
+                          courseImage={getImageUrl(p.product?.imageCover)}
+                          completedLessons={p.completedLessons?.length || 0}
+                          totalLessons={p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.length, 0) || 0}
+                          totalMinutes={p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.reduce((sl: number, l: any) => sl + (l.duration || 0), 0), 0) || 0}
+                          completedMinutes={p.timeSpent || 0}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "quizzes" && (
+                <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 shadow-xl shadow-black/[0.03]">
+                  <QuizResults results={quizResults} loading={false} />
+                </div>
+              )}
+
+              {activeTab === "assignments" && (
+                <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 shadow-xl shadow-black/[0.03]">
+                  <AssignmentResults results={assignmentResults} loading={false} />
+                </div>
+              )}
+
+              {activeTab === "profile" && (
+                <ProfileSettings
+                  user={userProfile}
+                  token={token || ''}
+                  onUpdate={(updatedUser) => {
+                    setUserProfile(updatedUser);
+                    toast({ title: t('common.success') || 'Profile updated successfully', className: "bg-green-500 text-white" });
+                  }}
+                />
+              )}
+
+              {activeTab === "chat" && (
+                <div className="h-[calc(100vh-140px)] rounded-[32px] overflow-hidden shadow-2xl">
+                  <ChatDashboardWidget variant="full" />
+                </div>
+              )}
+
+              {activeTab === "ai-chat" && (
+                <div className="h-[calc(100vh-140px)] rounded-[32px] overflow-hidden shadow-2xl">
+                  <StudentAiChat />
+                </div>
+              )}
+
+              {activeTab === "notifications" && (
+                <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 shadow-xl shadow-black/[0.03]">
+                  <UserNotifications />
+                </div>
+              )}
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
+
+      {/* Decorative Floating Elements (optional, context aware) */}
+      <div className="absolute top-[-100px] start-[-100px] w-80 h-80 bg-[#BEE3F8]/30 blur-[100px] rounded-full -z-10"></div>
+      <div className="absolute bottom-[-100px] end-[-100px] w-96 h-96 bg-[#FED7E2]/20 blur-[100px] rounded-full -z-10"></div>
     </div>
   );
 };
+
 export default UserDashboard;

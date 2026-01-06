@@ -17,6 +17,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Skip external requests to avoid CORS issues
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
@@ -24,6 +29,9 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 }
                 return fetch(event.request);
+            })
+            .catch(() => {
+                // Return nothing if fetch fails
             })
     );
 });

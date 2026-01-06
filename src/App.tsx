@@ -14,6 +14,7 @@ import Register from "./pages/auth/Register";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import InstructorDashboard from "./pages/dashboard/mangerDashboard";
+import { useLocation } from "react-router-dom";
 import Courses from "./pages/courses/Courses";
 import OrdersList from "./pages/shop/OrdersList";
 import OrderDetails from "./pages/shop/OrderDetails";
@@ -22,6 +23,7 @@ import MyOrders from "./pages/dashboard/MyOrders";
 import CartPage from "./pages/shop/CartPage"; // ✅ إضافة صفحة السلة
 import WishlistPage from "./pages/dashboard/WishlistPage";
 import AdminOrderDetails from "./pages/admin/AdminOrderDetails";
+import AdminSupportPage from "./pages/admin/AdminSupportPage";
 import CourseViewPage from "./pages/courses/CourseViewPage";
 import CourseDetailsPage from "./pages/courses/CourseDetailsPage";
 import About from "./pages/general/About";
@@ -38,6 +40,12 @@ import WorkOSCallback from "./pages/auth/WorkOSCallback";
 import MicrosoftCallback from "./pages/auth/MicrosoftCallback";
 import GoogleCallback from "./pages/auth/GoogleCallback";
 import AppleCallback from "./pages/auth/AppleCallback";
+import { ChatPage, ChatProvider, FloatingChatButton } from "./components/chat";
+import InstructorProfile from "./pages/public/InstructorProfile";
+import InstructorsPage from "./pages/public/InstructorsPage";
+import StudentPublicProfile from "./pages/public/StudentPublicProfile";
+import LiveStreamPage from "./pages/courses/LiveStreamPage";
+import LiveStreamsListPage from "./pages/courses/LiveStreamsListPage";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +110,65 @@ const ProtectedWishlistRoute = () => {
   return token ? <WishlistPage /> : <Navigate to="/login" />;
 };
 
+const LayoutContent = () => {
+  const location = useLocation();
+  const isChat = location.pathname === '/chat';
+  const isAdminSupport = location.pathname === '/admin/support';
+  const isFullScreen = isChat || isAdminSupport;
+
+  return (
+    <div className={`min-h-screen flex flex-col ${isFullScreen ? 'h-screen overflow-hidden' : ''}`}>
+      {!isFullScreen && <Navbar />}
+      <main className={`flex-grow ${isFullScreen ? 'h-full' : ''}`}>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-reset-code" element={<VerifyResetCode />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-signup-otp" element={<VerifySignupOTP />} />
+          <Route path="/auth/workos/callback" element={<WorkOSCallback />} />
+          <Route path="/auth/microsoft/callback" element={<MicrosoftCallback />} />
+          <Route path="/auth/google/callback" element={<GoogleCallback />} />
+          <Route path="/auth/apple/callback" element={<AppleCallback />} />
+          <Route path="/AdminDashboard" element={<ProtectedAdminRoute />} />
+          <Route path="/InstructorDashboard" element={<ProtectedInstructorRoute />} />
+          <Route path="/UserDashboard" element={<ProtectedUserRoute />} />
+          <Route path="/courses" element={<Courses />} />
+          <Route path="/cart" element={<ProtectedCartRoute />} /> {/* ✅ السلة */}
+          <Route path="/wishlist" element={<ProtectedWishlistRoute />} /> {/* قائمة الأمنيات */}
+          <Route path="/orders" element={<ProtectedOrdersRoute />} />
+          <Route path="/admin/order/:id" element={<AdminOrderDetails />} />
+          <Route path="/admin/support" element={<AdminSupportPage />} />
+          <Route path="/checkout" element={<ProtectedCheckoutRoute />} />
+          <Route path="/my-orders" element={<ProtectedMyOrdersRoute />} />
+          <Route path="/order/:orderId" element={<ProtectedOrderDetailsRoute />} />
+          <Route path="/course-details/:courseId" element={<CourseDetailsPage />} />
+          <Route path="/course/:courseId" element={<CourseViewPage />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="/community/:postId" element={<PostDetail />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/instructor/:instructorId" element={<InstructorProfile />} />
+          <Route path="/instructors" element={<InstructorsPage />} />
+          <Route path="/profile/student/:id" element={<StudentPublicProfile />} />
+          <Route path="/live" element={<LiveStreamsListPage />} />
+          <Route path="/live/:id" element={<LiveStreamPage />} />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      {!isFullScreen && <Footer />}
+      {/* Floating Chat Button - appears on all pages except full screen */}
+      {!isFullScreen && <FloatingChatButton />}
+    </div>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -109,46 +176,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <div className="min-h-screen flex flex-col">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/verify-reset-code" element={<VerifyResetCode />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-signup-otp" element={<VerifySignupOTP />} />
-                <Route path="/auth/workos/callback" element={<WorkOSCallback />} />
-                <Route path="/auth/microsoft/callback" element={<MicrosoftCallback />} />
-                <Route path="/auth/google/callback" element={<GoogleCallback />} />
-                <Route path="/auth/apple/callback" element={<AppleCallback />} />
-                <Route path="/AdminDashboard" element={<ProtectedAdminRoute />} />
-                <Route path="/InstructorDashboard" element={<ProtectedInstructorRoute />} />
-                <Route path="/UserDashboard" element={<ProtectedUserRoute />} />
-                <Route path="/courses" element={<Courses />} />
-                <Route path="/cart" element={<ProtectedCartRoute />} /> {/* ✅ السلة */}
-                <Route path="/wishlist" element={<ProtectedWishlistRoute />} /> {/* قائمة الأمنيات */}
-                <Route path="/orders" element={<ProtectedOrdersRoute />} />
-                <Route path="/admin/order/:id" element={<AdminOrderDetails />} />
-                <Route path="/checkout" element={<ProtectedCheckoutRoute />} />
-                <Route path="/my-orders" element={<ProtectedMyOrdersRoute />} />
-                <Route path="/order/:orderId" element={<ProtectedOrderDetailsRoute />} />
-                <Route path="/course-details/:courseId" element={<CourseDetailsPage />} />
-                <Route path="/course/:courseId" element={<CourseViewPage />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/community" element={<CommunityPage />} />
-                <Route path="/community/:postId" element={<PostDetail />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/terms" element={<Terms />} />
-
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
+          <ChatProvider>
+            <LayoutContent />
+          </ChatProvider>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

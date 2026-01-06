@@ -13,6 +13,19 @@ import PlatformStats from "@/components/admin/PlatformStats";
 import { InstructorRequestsComponent } from "@/components/admin/InstructorRequestsComponent";
 import AllStudentsTable from "@/components/admin/AllStudentsTable";
 import AllCoursesTable from "@/components/admin/AllCoursesTable";
+import WithdrawalsManager from "@/components/admin/WithdrawalsManager";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
+import { AdminChatPanel } from "@/components/chat";
+import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
+import UserCard from "@/components/dashboard/UserCard";
+import UserProfileDetail from "@/components/dashboard/UserProfileDetail";
+import ProfileSettings from "@/components/dashboard/ProfileSettings";
+import { GamificationManager } from "@/components/admin/GamificationManager";
+import { TrainingCentersComponent } from "@/components/admin/TrainingCentersComponent";
+import LiveStreamManager from "@/components/admin/LiveStreamManager";
+import { AddProductModal } from "@/components/admin/AddProductModal";
+import HeroBannerManager from "@/components/admin/HeroBannerManager";
+import CourseManagementAI from "@/components/instructor/CourseManagementAI";
 
 // Icons
 import {
@@ -31,7 +44,16 @@ import {
     GraduationCap,
     Search,
     Bell,
-    PlusCircle
+    PlusCircle,
+    MessageCircle,
+    Settings,
+    Headphones,
+    ExternalLink,
+    Trophy,
+    Building,
+    Video,
+    Image,
+    Sparkles
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
@@ -86,7 +108,7 @@ interface Order {
 interface StatCard {
     label: string;
     value: number | string;
-    icon: "user" | "box" | "shopping-cart" | "dollar-sign";
+    icon: "user" | "box" | "shopping-cart" | "dollar-sign" | "shopping-bag";
     color: string;
     trend?: string;
 }
@@ -121,8 +143,21 @@ const AdminDashboard = () => {
     const [loadingStats, setLoadingStats] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [loadingCourses, setLoadingCourses] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [chatRecipient, setChatRecipient] = useState<string | undefined>(undefined);
+    const [userFilter, setUserFilter] = useState<'all' | 'student' | 'instructor'>('all');
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [showAddProductModal, setShowAddProductModal] = useState(false);
+
+    // Filter states
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+
+    useEffect(() => {
+        if (activeTab !== 'chat') {
+            setChatRecipient(undefined);
+        }
+    }, [activeTab]);
 
     // =============== Fetch Users ===============
     const fetchUsers = async () => {
@@ -235,6 +270,123 @@ const AdminDashboard = () => {
         }
     };
 
+    const fetchCurrentUser = async () => {
+        if (!token) return;
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/v1/users/getMe`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setCurrentUser(res.data?.data || res.data);
+        } catch (e) { console.error(e) }
+    };
+
+    // =============== Delete User ===============
+    const handleDeleteUser = async (userId: string) => {
+        try {
+            await axios.delete(`${API_BASE_URL}/api/v1/users/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast({ title: "User deleted successfully", className: "bg-green-500 text-white" });
+            fetchUsers();
+            fetchAllStudents(currentPage);
+            setSelectedUser(null);
+        } catch (error: any) {
+            toast({ title: error.response?.data?.message || "Error deleting user", variant: "destructive" });
+        }
+    };
+
+    // =============== Handle Card Click ===============
+    const handleCardClick = async (user: any) => {
+        setSelectedUser(user);
+        try {
+            // If instructor/manager, fetch public profile which has courses
+            if (user.role === 'manager' || user.role === 'instructor' || user.role === 'Instructor') {
+                console.log("Fetching instructor data for:", user._id);
+                const res = await axios.get(`${API_BASE_URL}/api/v1/users/instructor/${user._id}`);
+                console.log("Instructor API response:", res.data);
+                if (res.data?.data) {
+                    const { instructor, courses, stats } = res.data.data;
+                    setSelectedUser((prev: any) => {
+                        const newState = {
+                            ...prev,
+                            ...instructor,
+                            role: 'Instructor', // Ensure role stays consistent
+                            myCourses: courses,
+                            studentsCount: stats?.totalStudents,
+                            coursesCount: stats?.totalCourses
+                        };
+                        console.log("New Selected User State:", newState);
+                        return newState;
+                    });
+                }
+            } else {
+                // Regular user
+                const res = await axios.get(`${API_BASE_URL}/api/v1/users/${user._id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                // Fetch orders to get student's courses with enhanced safety and logging
+                let userCourses: any[] = [];
+                try {
+                    console.log(`Fetching orders for user: ${user._id}`);
+                    const ordersRes = await axios.get(`${API_BASE_URL}/api/v1/orders?user=${user._id}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+
+                    if (ordersRes.data?.data) {
+                        let orders = ordersRes.data.data;
+                        console.log(`Initial orders found: ${orders.length}`);
+
+                        // Client-side safety filter: Ensure orders belong to this user
+                        // This handles cases where backend filter might be ignored (e.g. server not restarted)
+                        orders = orders.filter((o: any) => {
+                            const oUserId = o.user?._id || o.user;
+                            return oUserId?.toString() === user._id?.toString();
+                        });
+                        console.log(`Orders after filtering for ${user._id}: ${orders.length}`);
+
+                        userCourses = orders.flatMap((order: any) =>
+                            (order.cartItems || []).reduce((acc: any[], item: any) => {
+                                if (item.product && item.product._id) {
+                                    acc.push({
+                                        _id: item.product._id,
+                                        title: item.product.title || 'Untitled',
+                                        imageCover: item.product.imageCover,
+                                        price: item.price,
+                                        progress: 0,
+                                        createdAt: order.createdAt
+                                    });
+                                }
+                                return acc;
+                            }, [])
+                        );
+
+                        // Deduplicate courses
+                        userCourses = Array.from(new Map(userCourses.map(c => [c._id, c])).values());
+                        console.log("Extracted courses for student (Reduce method):", userCourses);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch user orders", err);
+                }
+
+                if (res.data?.data) {
+                    setSelectedUser((prev: any) => {
+                        const finalUserData = {
+                            ...prev,
+                            ...res.data.data,
+                            courses: userCourses,
+                            coursesCount: userCourses.length
+                        };
+                        console.log("Setting selected user data (Student):", finalUserData);
+                        return finalUserData;
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching details", error);
+        }
+    };
+
     // =============== On Load ===============
     useEffect(() => {
         if (!token) {
@@ -248,6 +400,7 @@ const AdminDashboard = () => {
         fetchDashboardStats();
         fetchAllStudents();
         fetchAllCourses();
+        fetchCurrentUser();
     }, [token]);
 
     // =============== Logout ===============
@@ -266,21 +419,27 @@ const AdminDashboard = () => {
         0
     );
 
-    const iconMap: Record<string, React.ReactNode> = {
+    const iconMap = {
         user: <Users size={20} className="text-purple-600" />,
         box: <Box size={20} className="text-orange-600" />,
         "shopping-cart": <ShoppingCart size={20} className="text-blue-600" />,
         "dollar-sign": <DollarSign size={20} className="text-green-600" />,
+        "shopping-bag": <ShoppingBag size={20} className="text-indigo-600" />,
     };
 
-    const statsCards: StatCard[] = [
-        { label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: "dollar-sign", color: "bg-purple-50", trend: "+12%" },
-        { label: "Projects (Products)", value: totalProducts, icon: "box", color: "bg-orange-50", trend: "-10%" },
-        { label: "Orders", value: totalOrders, icon: "shopping-cart", color: "bg-blue-50", trend: "+8%" },
-        { label: "Resources (Users)", value: totalUsers, icon: "user", color: "bg-yellow-50", trend: "+2%" }
+    const statsCards = [
+        { label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: "dollar-sign", color: "bg-green-50", trend: "+12%" },
+        { label: "Platform Wallet", value: `$${dashboardStats?.finances?.platformTotal?.toFixed(2) || 0}`, icon: "shopping-cart", color: "bg-blue-50", trend: "70/30 Split" },
+        { label: "Orders", value: totalOrders, icon: "shopping-bag", color: "bg-purple-50", trend: "+8%" },
+        { label: "Users", value: totalUsers, icon: "user", color: "bg-yellow-50", trend: "+2%" }
     ];
 
     const menuItems = [
+        { id: "withdrawals", label: t('dashboard.wallet') || 'المحفظة المالية', icon: <DollarSign size={20} /> },
+        { id: "chat", label: t('dashboard.chat') || 'الرسائل والدعم', icon: <MessageCircle size={20} /> },
+        { id: "chat-admin", label: t('dashboard.chatAdmin') || 'إدارة الدردشة', icon: <Settings size={20} /> },
+        { id: "settings", label: t('dashboard.profile') || 'الإعدادات', icon: <Settings size={20} /> },
+        { id: "helpdesk", label: t('dashboard.helpdesk') || 'مركز الدعم الفني', icon: <Headphones size={20} />, isLink: true, href: '/admin/support' },
         { id: "analytics", label: t('dashboard.analytics'), icon: <BarChart size={20} /> },
         { id: "requests", label: t('dashboard.instructorRequests'), icon: <GraduationCap size={20} /> },
         { id: "orders", label: t('dashboard.orders'), icon: <ShoppingBag size={20} /> },
@@ -288,12 +447,18 @@ const AdminDashboard = () => {
         { id: "users", label: t('dashboard.users'), icon: <Users size={20} /> },
         { id: "categories", label: t('dashboard.categories'), icon: <Folder size={20} /> },
         { id: "subcategories", label: t('dashboard.subCategories'), icon: <FolderTree size={20} /> },
+        { id: "training-centers", label: "Training Centers", icon: <Building size={20} /> },
         { id: "coupons", label: t('dashboard.coupons'), icon: <Ticket size={20} /> },
+        { id: "gamification", label: t('dashboard.gamification') || "نظام الألعاب", icon: <Trophy size={20} /> },
+        { id: "notifications", label: t('dashboard.notifications') || "إدارة الإشعارات", icon: <Bell size={20} /> },
         { id: "allStudents", label: t('dashboard.allStudents'), icon: <Users size={20} /> },
         { id: "allCourses", label: t('dashboard.allCourses'), icon: <Database size={20} /> },
+        { id: "livestreams", label: 'إدارة البث المباشر', icon: <Video size={20} /> },
+        { id: "hero-banners", label: 'إعلانات الصفحة الرئيسية', icon: <Image size={20} /> },
+        { id: "course-management-ai", label: 'مساعد الكورسات AI', icon: <Sparkles size={20} /> },
     ];
 
-    const currentDir = i18n.language === "ar" ? "rtl" : "ltr";
+    const currentDir = i18n.language.startsWith("ar") ? "rtl" : "ltr";
 
     return (
         <div className="flex h-screen bg-[#F4F2EE] font-sans overflow-hidden pt-24" dir={currentDir}>
@@ -307,23 +472,38 @@ const AdminDashboard = () => {
                         <h1 className="text-xl font-bold tracking-brand">{t('app.title')}</h1>
                     </div>
 
-                    <button className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium transition-transform active:scale-95 shadow-lg shadow-orange-500/30 mb-8">
+                    <button
+                        onClick={() => setShowAddProductModal(true)}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium transition-transform active:scale-95 shadow-lg shadow-orange-500/30 mb-8"
+                    >
                         <PlusCircle size={20} />
                         <span>{t('dashboard.createProject')}</span>
                     </button>
 
                     <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
-                        {menuItems.map((item) => (
+                        {menuItems.map((item: any) => (
                             <button
                                 key={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                onClick={() => {
+                                    if (item.isLink && item.href) {
+                                        navigate(item.href);
+                                    } else {
+                                        setActiveTab(item.id);
+                                    }
+                                }}
                                 className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 ${activeTab === item.id
                                     ? "bg-white text-black shadow-lg font-semibold transform ltr:translate-x-1 rtl:-translate-x-1"
                                     : "hover:bg-white/5 hover:text-gray-200"
                                     }`}
                             >
                                 <span className={activeTab === item.id ? "text-orange-500" : ""}>{item.icon}</span>
-                                <span>{item.label}</span>
+                                <span className="flex-1">{item.label}</span>
+                                {item.isLink && (
+                                    <ExternalLink size={14} className="text-gray-500" />
+                                )}
+                                {item.id === 'chat-admin' && (
+                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                )}
                             </button>
                         ))}
                     </nav>
@@ -359,6 +539,25 @@ const AdminDashboard = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
+                            {/* Quick Chat Button */}
+                            <button
+                                onClick={() => setActiveTab('chat')}
+                                className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 relative"
+                                title={t('dashboard.chat') || 'الرسائل'}
+                            >
+                                <MessageCircle size={20} className="text-white" />
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white">3</span>
+                            </button>
+
+                            {/* Quick Helpdesk Button */}
+                            <button
+                                onClick={() => navigate('/admin/support')}
+                                className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                                title={t('dashboard.helpdesk') || 'مركز الدعم'}
+                            >
+                                <Headphones size={20} className="text-white" />
+                            </button>
+
                             <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors relative">
                                 <Bell size={20} className="text-gray-600" />
                                 <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
@@ -400,13 +599,13 @@ const AdminDashboard = () => {
                                     </div>
                                     <div>
                                         <p className="text-gray-500 text-sm mb-1">{t('dashboard.totalRevenue')}</p>
-                                        <h3 className="text-2xl font-bold text-gray-900">${totalRevenue.toFixed(2)}</h3>
+                                        <h3 className="text-2xl font-bold text-gray-900">${dashboardStats?.finances?.platformTotal?.toFixed(2) || totalRevenue.toFixed(2)}</h3>
                                     </div>
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className={`text-xs font-bold text-green-500`}>
-                                            +12%
+                                            Admin: ${dashboardStats?.finances?.adminBalance?.toFixed(2) || 0}
                                         </span>
-                                        <span className="text-xs text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
+                                        <span className="text-xs text-gray-400">Designer: ${dashboardStats?.finances?.designerBalance?.toFixed(2) || 0}</span>
                                     </div>
                                 </Card>
 
@@ -500,28 +699,129 @@ const AdminDashboard = () => {
                         {activeTab === "requests" && <InstructorRequestsComponent token={token || ""} />}
                         {activeTab === "orders" && <OrdersComponent orders={orders} token={token || ""} fetchOrders={fetchOrders} searchQuery="" />}
                         {activeTab === "products" && <ProductsComponent products={products} token={token || ""} fetchProducts={fetchProducts} searchQuery="" />}
-                        {activeTab === "users" && <UsersComponent users={users} token={token || ""} fetchUsers={fetchUsers} searchQuery="" />}
+                        {activeTab === "training-centers" && <TrainingCentersComponent token={token || ""} />}
+                        {activeTab === "users" && (
+                            <div className="space-y-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                            <Users className="h-6 w-6 text-blue-600" />
+                                            {t('dashboard.usersDirectory') || 'Users Directory'}
+                                        </h2>
+                                        <p className="text-sm text-gray-500 mt-1">Manage students, instructors, and admins from one place.</p>
+                                    </div>
+
+                                    {/* Sub-tabs / Filter */}
+                                    <div className="flex p-1 bg-gray-100 rounded-xl self-start md:self-auto">
+                                        <button
+                                            onClick={() => setUserFilter('student')}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${userFilter === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            Students
+                                        </button>
+                                        <button
+                                            onClick={() => setUserFilter('instructor')}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${userFilter === 'instructor' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            Instructors
+                                        </button>
+                                        <button
+                                            onClick={() => setUserFilter('all')}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${userFilter === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                        >
+                                            All Users
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {selectedUser ? (
+                                    <UserProfileDetail
+                                        user={selectedUser}
+                                        currentUserRole="admin"
+                                        onBack={() => setSelectedUser(null)}
+                                        onChat={() => {
+                                            setChatRecipient(selectedUser._id);
+                                            setActiveTab('chat');
+                                        }}
+                                        onDelete={handleDeleteUser}
+                                    />
+                                ) : (
+                                    <>
+                                        {/* Content based on filter */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                            {/* Students Logic */}
+                                            {(userFilter === 'student' || userFilter === 'all') && allStudents.map((student: any) => (
+                                                <UserCard
+                                                    key={`student-${student._id}`}
+                                                    user={{ ...student, role: 'Student' }}
+                                                    onClick={handleCardClick}
+                                                />
+                                            ))}
+
+                                            {/* Instructors/Admins Logic */}
+                                            {(userFilter === 'instructor' || userFilter === 'all') && users
+                                                .filter((u: any) => userFilter === 'instructor' ? (u.role === 'manager' || u.role === 'instructor') : true)
+                                                // Avoid duplicates if 'all' is selected and students are also in 'users' array
+                                                .filter((u: any) => userFilter === 'all' ? u.role !== 'student' : true)
+                                                .map((user: any) => (
+                                                    <UserCard
+                                                        key={`user-${user._id}`}
+                                                        user={{ ...user, role: user.role === 'manager' ? 'Instructor' : (user.role || 'User') }}
+                                                        onClick={handleCardClick}
+                                                    />
+                                                ))}
+                                        </div>
+
+                                        {/* Empty State */}
+                                        {((userFilter === 'student' && allStudents.length === 0) ||
+                                            (userFilter === 'instructor' && users.filter((u: any) => u.role === 'instructor' || u.role === 'manager').length === 0)) && (
+                                                <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-gray-200 col-span-full">
+                                                    <Users size={48} className="mx-auto text-gray-300 mb-4" />
+                                                    <p className="text-gray-500 font-medium">No users found for this category.</p>
+                                                </div>
+                                            )}
+
+                                        {/* Pagination for Students (only show when students are primary view) */}
+                                        {userFilter === 'student' && (
+                                            <div className="mt-6 flex justify-center">
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        onClick={() => {
+                                                            const newPage = Math.max(1, currentPage - 1);
+                                                            setCurrentPage(newPage);
+                                                            fetchAllStudents(newPage);
+                                                        }}
+                                                        disabled={currentPage === 1}
+                                                        variant="outline"
+                                                    >
+                                                        Previous
+                                                    </Button>
+                                                    <span className="flex items-center px-4 font-medium">
+                                                        Page {currentPage} of {totalPages}
+                                                    </span>
+                                                    <Button
+                                                        onClick={() => {
+                                                            const newPage = Math.min(totalPages, currentPage + 1);
+                                                            setCurrentPage(newPage);
+                                                            fetchAllStudents(newPage);
+                                                        }}
+                                                        disabled={currentPage === totalPages}
+                                                        variant="outline"
+                                                    >
+                                                        Next
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
                         {activeTab === "categories" && <CategoriesComponent token={token || ""} searchQuery="" />}
                         {activeTab === "subcategories" && <SubCategoriesComponent token={token || ""} searchQuery="" />}
                         {activeTab === "coupons" && <CouponsComponent token={token || ""} searchQuery="" />}
-                        {activeTab === "allStudents" && (
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800">{t('dashboard.allStudents')}</h2>
-                                    <span className="text-sm text-gray-500">{allStudents.length} {t('dashboard.students')}</span>
-                                </div>
-                                <AllStudentsTable
-                                    students={allStudents}
-                                    loading={loadingStudents}
-                                    currentPage={currentPage}
-                                    totalPages={totalPages}
-                                    onPageChange={(page) => {
-                                        setCurrentPage(page);
-                                        fetchAllStudents(page);
-                                    }}
-                                />
-                            </div>
-                        )}
+                        {activeTab === "gamification" && <GamificationManager token={token || ""} />}
+                        {activeTab === "notifications" && <NotificationManager token={token || ""} />}
                         {activeTab === "allCourses" && (
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between mb-6">
@@ -531,9 +831,55 @@ const AdminDashboard = () => {
                                 <AllCoursesTable courses={allCourses} loading={loadingCourses} />
                             </div>
                         )}
+                        {activeTab === "withdrawals" && (
+                            <WithdrawalsManager token={token || ""} />
+                        )}
+                        {activeTab === "chat" && (
+                            <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl">
+                                <ChatDashboardWidget variant="full" targetUserId={chatRecipient} />
+                            </div>
+                        )}
+
+                        {activeTab === "settings" && currentUser && (
+                            <ProfileSettings
+                                user={currentUser}
+                                token={token || ''}
+                                onUpdate={(updated) => {
+                                    setCurrentUser(updated);
+                                    toast({ title: "Profile Updated" });
+                                }}
+                            />
+                        )}
+
+                        {activeTab === "chat-admin" && <AdminChatPanel />}
+                        {activeTab === "hero-banners" && <HeroBannerManager token={token || ""} />}
+                        {activeTab === "course-management-ai" && (
+                            <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl bg-white">
+                                <CourseManagementAI 
+                                    courses={allCourses}
+                                    students={allStudents}
+                                    token={token}
+                                    onAction={(action, data) => {
+                                        if (action === 'refresh') {
+                                            fetchAllCourses();
+                                            fetchAllStudents();
+                                        }
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
+
+            {showAddProductModal && (
+                <AddProductModal
+                    show={showAddProductModal}
+                    onClose={() => setShowAddProductModal(false)}
+                    token={token || ''}
+                    fetchProducts={fetchProducts}
+                />
+            )}
         </div>
     );
 };

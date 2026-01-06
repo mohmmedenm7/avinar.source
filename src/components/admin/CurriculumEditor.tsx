@@ -1,15 +1,19 @@
 import React, { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronUp, Video, FileText, Clock } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, Video, FileText, Clock, Link as LinkIcon, Eye, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export interface Lecture {
     title: string;
-    video: string;
+    video: string;        // رفع ملف
+    videoUrl: string;     // رابط خارجي
     description: string;
     duration: number;
+    isFree: boolean;      // محاضرة مجانية للمعاينة
 }
 
 export interface Section {
@@ -69,8 +73,10 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
         newSections[sectionIndex].lectures.push({
             title: "محاضرة جديدة",
             video: "",
+            videoUrl: "",
             description: "",
             duration: 0,
+            isFree: false,
         });
         setCurriculum(newSections);
     };
@@ -87,7 +93,7 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
         sectionIndex: number,
         lectureIndex: number,
         field: keyof Lecture,
-        value: string | number
+        value: string | number | boolean
     ) => {
         const newSections = [...curriculum];
         newSections[sectionIndex].lectures[lectureIndex] = {
@@ -161,9 +167,16 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                                 {section.lectures.map((lecture, lIndex) => (
                                     <div key={lIndex} className="bg-white p-4 rounded border shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
-                                            <h4 className="font-semibold text-sm text-gray-600">
-                                                محاضرة {lIndex + 1}
-                                            </h4>
+                                            <div className="flex items-center gap-3">
+                                                <h4 className="font-semibold text-sm text-gray-600">
+                                                    محاضرة {lIndex + 1}
+                                                </h4>
+                                                {lecture.isFree && (
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                                                        <Eye size={12} /> مجانية
+                                                    </span>
+                                                )}
+                                            </div>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -190,29 +203,31 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                                             </div>
 
                                             <div>
-                                                <label className="text-xs text-gray-500 mb-1 block">رابط الفيديو</label>
+                                                <label className="text-xs text-gray-500 mb-1 block">رابط فيديو خارجي (YouTube, Vimeo)</label>
                                                 <div className="flex items-center gap-2">
-                                                    <Video className="h-4 w-4 text-gray-400" />
+                                                    <LinkIcon className="h-4 w-4 text-blue-400" />
                                                     <Input
-                                                        value={lecture.video}
+                                                        value={lecture.videoUrl || ""}
                                                         onChange={(e) =>
-                                                            handleLectureChange(sIndex, lIndex, "video", e.target.value)
+                                                            handleLectureChange(sIndex, lIndex, "videoUrl", e.target.value)
                                                         }
-                                                        placeholder="https://example.com/video.mp4"
+                                                        placeholder="https://www.youtube.com/watch?v=..."
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div className="md:col-span-2">
-                                                <label className="text-xs text-gray-500 mb-1 block">الوصف</label>
-                                                <Textarea
-                                                    value={lecture.description}
-                                                    onChange={(e) =>
-                                                        handleLectureChange(sIndex, lIndex, "description", e.target.value)
-                                                    }
-                                                    placeholder="وصف مختصر لمحتوى المحاضرة..."
-                                                    rows={2}
-                                                />
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">أو رابط فيديو مرفوع</label>
+                                                <div className="flex items-center gap-2">
+                                                    <Upload className="h-4 w-4 text-gray-400" />
+                                                    <Input
+                                                        value={lecture.video || ""}
+                                                        onChange={(e) =>
+                                                            handleLectureChange(sIndex, lIndex, "video", e.target.value)
+                                                        }
+                                                        placeholder="رابط الفيديو المباشر (مرفوع على الخادم)"
+                                                    />
+                                                </div>
                                             </div>
 
                                             <div>
@@ -233,6 +248,35 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                                                         min={0}
                                                     />
                                                 </div>
+                                            </div>
+
+                                            <div className="md:col-span-2">
+                                                <label className="text-xs text-gray-500 mb-1 block">الوصف</label>
+                                                <Textarea
+                                                    value={lecture.description}
+                                                    onChange={(e) =>
+                                                        handleLectureChange(sIndex, lIndex, "description", e.target.value)
+                                                    }
+                                                    placeholder="وصف مختصر لمحتوى المحاضرة..."
+                                                    rows={2}
+                                                />
+                                            </div>
+
+                                            {/* Free Preview Toggle */}
+                                            <div className="md:col-span-2 flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <Eye className="h-4 w-4 text-blue-600" />
+                                                    <Label htmlFor={`free-${sIndex}-${lIndex}`} className="text-sm font-medium text-blue-800">
+                                                        محاضرة مجانية للمعاينة
+                                                    </Label>
+                                                </div>
+                                                <Switch
+                                                    id={`free-${sIndex}-${lIndex}`}
+                                                    checked={lecture.isFree || false}
+                                                    onCheckedChange={(checked) =>
+                                                        handleLectureChange(sIndex, lIndex, "isFree", checked)
+                                                    }
+                                                />
                                             </div>
                                         </div>
                                     </div>

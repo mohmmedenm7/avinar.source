@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from "react";
-import { Upload, X, Play, CheckCircle2 } from "lucide-react";
+import { Upload, X, Play, CheckCircle2, Gift } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
@@ -15,6 +15,7 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
   const [videoName, setVideoName] = useState(null);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [isFree, setIsFree] = useState(false);
 
   // Curriculum State
   const [whatWillYouLearn, setWhatWillYouLearn] = useState<string[]>([]);
@@ -43,6 +44,9 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
       if (product.whatWillYouLearn) {
         setWhatWillYouLearn(product.whatWillYouLearn);
       }
+
+      // Initialize isFree
+      setIsFree(product.isFree || product.price === 0);
 
       // Initialize Category
       if (product.category) {
@@ -167,7 +171,8 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
     fd.append("title", renderText(formData.title));
     fd.append("description", renderText(formData.description));
     fd.append("quantity", FIXED_QUANTITY);
-    fd.append("price", String(formData.price ?? 0));
+    fd.append("price", isFree ? "0" : String(formData.price ?? 0));
+    fd.append("isFree", isFree ? "true" : "false");
 
     if (formData.category) {
       fd.append("category", formData.category);
@@ -316,13 +321,34 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">السعر</label>
+          {/* Free Course Toggle */}
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+            <label className="flex items-center gap-3 cursor-pointer" htmlFor="edit-isFree-toggle">
+              <Gift className="h-5 w-5 text-green-600" />
+              <div>
+                <span className="text-sm font-bold text-green-800 block">كورس مجاني</span>
+                <span className="text-xs text-green-600">تفعيل هذا الخيار يجعل الكورس متاحاً مجاناً للجميع</span>
+              </div>
+            </label>
+            <input
+              type="checkbox"
+              id="edit-isFree-toggle"
+              checked={isFree}
+              onChange={(e) => { setIsFree(e.target.checked); if (e.target.checked) handleInputChange("price", 0); }}
+              className="w-6 h-6 rounded text-green-600 focus:ring-green-500"
+            />
+          </div>
+
+          <div className={isFree ? "opacity-50 pointer-events-none" : ""}>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              السعر {isFree && <span className="text-green-600 text-xs">(مجاني)</span>}
+            </label>
             <input
               type="number"
-              value={formData.price || 0}
+              value={isFree ? 0 : (formData.price || 0)}
               onChange={(e) => handleInputChange("price", parseFloat(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none"
+              disabled={isFree}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-right focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
             />
           </div>
 

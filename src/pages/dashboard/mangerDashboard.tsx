@@ -1,44 +1,56 @@
-﻿import { useEffect, useState } from "react";
+﻿// mangerDashboard.tsx - مع مساحة للـ Navbar في الأعلى
+
+import { useEffect, useState } from "react";
 import {
-  BarChart,
-  LogOut,
-  LayoutDashboard,
-  GraduationCap,
-  ClipboardList,
-  Sparkles,
-  Image,
-  FileVideo,
-  PlusCircle,
-  Search,
-  Bell,
-  ChevronDown,
-  ChevronUp,
-  Users
+  BarChart, LogOut, LayoutDashboard, GraduationCap, ClipboardList,
+  Sparkles, Image, FileVideo, Video, PlusCircle, Search, Bell, Eye,
+  ChevronDown, ChevronUp, Users, MessageSquare, Calendar,
+  Heart, Share2, MoreHorizontal, TrendingUp, DollarSign,
+  BookOpen, Award, Settings, Edit, Trash2, MessageCircle
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { CommunityContent } from "@/pages/CommunityPage";
+import { communityService } from "@/services/communityService";
 import { API_BASE_URL } from '@/config/env';
-import { ProductsComponent } from "@/components/admin/ProductsComponent";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-import AiImageGenerator from "@/components/dashboard/AiImageGenerator";
 import InstructorStats from "@/components/instructor/InstructorStats";
 import PendingGrading from "@/components/instructor/PendingGrading";
 import CourseAnalytics from "@/components/instructor/CourseAnalytics";
 import AiCourseOutlineGenerator from "@/components/instructor/AiCourseOutlineGenerator";
-import PhotopeaEditor from "@/components/instructor/PhotopeaEditor";
+import AIPhotopeaStudio from "@/components/instructor/AIPhotopeaStudio";
+import InstructorWallet from "@/components/instructor/InstructorWallet";
 import VideoTools from "@/components/instructor/VideoTools";
 import UdemyLinkModal from "@/components/instructor/UdemyLinkModal";
+import LiveStreamManager from "@/components/admin/LiveStreamManager";
+import { AddProductModal } from '@/components/admin/AddProductModal';
+import { EditProductModal } from '@/components/admin/EditProductModal';
+import { ChatButton, EnhancedChatWidget } from "@/components/chat";
+import UserCard from "@/components/dashboard/UserCard";
+import UserProfileDetail from "@/components/dashboard/UserProfileDetail";
+import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
+import ProfileSettings from "@/components/dashboard/ProfileSettings";
+import { UserNotifications } from "@/components/dashboard/UserNotifications";
+import NotificationBell from "@/components/dashboard/NotificationBell";
+import CourseManagementAI from "@/components/instructor/CourseManagementAI";
 
 interface Course {
   _id: string;
   title: string;
   price: number;
   studentsCount?: number;
+  category?: string | { name: string; _id?: string };
+  description?: string;
+  imageCover?: string;
+  rating?: number;
+  likes?: number;
+  comments?: number;
 }
 
 interface Student {
@@ -47,6 +59,7 @@ interface Student {
   email: string;
   courseTitle: string;
   joinedAt: string;
+  avatar?: string;
 }
 
 interface UdemyCourse {
@@ -60,29 +73,101 @@ interface UdemyCourse {
   url: string;
 }
 
+interface CommunityPost {
+  _id: string;
+  title: string;
+  category: string;
+  user?: {
+    name: string;
+    profileImg?: string;
+  };
+  createdAt: string;
+}
+
+
+
+const getImageUrl = (path: string | undefined, type: 'users' | 'products' = 'products') => {
+  if (!path) return undefined;
+  if (path.startsWith('http')) {
+    const lastIndex = path.lastIndexOf('http');
+    return path.substring(lastIndex);
+  }
+  return `${API_BASE_URL}/${type}/${path}`;
+};
+
 export default function InstructorDashboard() {
   const { t, i18n } = useTranslation();
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [udemyCourses, setUdemyCourses] = useState<UdemyCourse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [loadingUdemy, setLoadingUdemy] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
-
-  // New state for API data
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [pendingGrading, setPendingGrading] = useState<any[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingPending, setLoadingPending] = useState(false);
   const [isUdemyModalOpen, setIsUdemyModalOpen] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [isUdemyLinked, setIsUdemyLinked] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Course | null>(null);
+  const [formData, setFormData] = useState<any>({});
+  const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
+  const [chatRecipient, setChatRecipient] = useState<string | undefined>(undefined);
+  const [latestCommunities, setLatestCommunities] = useState<CommunityPost[]>([]);
+  const [loadingCommunities, setLoadingCommunities] = useState(false);
+
+  // Track visited tabs to keep heavy components mounted
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["overview"]));
+
+  useEffect(() => {
+    setVisitedTabs(prev => {
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'chat') setChatRecipient(undefined);
+  }, [activeTab]);
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const token = localStorage.getItem("token");
 
-  // Fetch Stats
+  // Handle URL Query Params
+  useEffect(() => {
+    if (courses.length > 0) {
+      const editId = searchParams.get('edit');
+      const analyticsId = searchParams.get('analytics');
+
+      if (editId) {
+        const course = courses.find(c => c._id === editId);
+        if (course) {
+          handleEditCourse(course);
+        }
+      }
+
+      if (analyticsId) {
+        setActiveTab('analytics');
+        setExpandedCourseId(analyticsId);
+      }
+    }
+  }, [searchParams, courses]);
+
+  const topStudents = [
+    { name: 'أحمد', avatar: 'https://i.pravatar.cc/150?img=11' },
+    { name: 'سارة', avatar: 'https://i.pravatar.cc/150?img=12' },
+    { name: 'محمد', avatar: 'https://i.pravatar.cc/150?img=13' },
+    { name: 'فاطمة', avatar: 'https://i.pravatar.cc/150?img=14' },
+    { name: 'علي', avatar: 'https://i.pravatar.cc/150?img=15' },
+  ];
+
   const fetchDashboardStats = async () => {
     if (!token) return;
     setLoadingStats(true);
@@ -91,14 +176,16 @@ export default function InstructorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDashboardStats(res.data?.data || res.data);
-    } catch (error: any) {
+      if (res.data?.data?.students) {
+        setStudents(res.data.data.students);
+      }
+    } catch (error) {
       console.error("Error fetching dashboard stats:", error);
     } finally {
       setLoadingStats(false);
     }
   };
 
-  // Fetch Pending Grading
   const fetchPendingGrading = async () => {
     if (!token) return;
     setLoadingPending(true);
@@ -107,14 +194,13 @@ export default function InstructorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPendingGrading(res.data?.data || res.data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching pending grading:", error);
     } finally {
       setLoadingPending(false);
     }
   };
 
-  // Fetch Courses
   const fetchCourses = async () => {
     setLoading(true);
     try {
@@ -122,7 +208,6 @@ export default function InstructorDashboard() {
       const url = userId
         ? `${API_BASE_URL}/api/v1/products?instructor=${userId}`
         : `${API_BASE_URL}/api/v1/products`;
-
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -134,10 +219,7 @@ export default function InstructorDashboard() {
     }
   };
 
-  // Fetch Students (Simplified for brevity)
   const fetchStudents = async () => {
-    // Logic from previous file largely preserved in intent but omitted for brevity if complex
-    // Just re-implementing basic fetch from before
     try {
       const res = await axios.get(`${API_BASE_URL}/api/v1/orders`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -145,7 +227,6 @@ export default function InstructorDashboard() {
       const orders = res.data?.data || [];
       const myStudents: Student[] = [];
       const myCourseIds = new Set(courses.map(c => c._id));
-
       orders.forEach((order: any) => {
         if (!order.isPaid) return;
         order.cartItems.forEach((item: any) => {
@@ -161,10 +242,70 @@ export default function InstructorDashboard() {
         });
       });
       setStudents(myStudents);
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // Fetch Udemy Courses
+  const handleStudentClick = async (student: any) => {
+    setSelectedStudent(student);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/users/${student._id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Fetch student courses from orders
+      let studentCourses: any[] = [];
+      try {
+        console.log(`Instructor View - Fetching orders for student: ${student._id}`);
+        const ordersRes = await axios.get(`${API_BASE_URL}/api/v1/orders?user=${student._id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (ordersRes.data?.data) {
+          let orders = ordersRes.data.data;
+          // Safety filter
+          orders = orders.filter((o: any) => {
+            const oUserId = o.user?._id || o.user;
+            return oUserId?.toString() === student._id?.toString();
+          });
+
+          studentCourses = orders.flatMap((order: any) =>
+            (order.cartItems || []).reduce((acc: any[], item: any) => {
+              if (item.product && item.product._id) {
+                acc.push({
+                  _id: item.product._id,
+                  title: item.product.title || 'Untitled',
+                  imageCover: item.product.imageCover,
+                  price: item.price,
+                  progress: 0,
+                  createdAt: order.createdAt
+                });
+              }
+              return acc;
+            }, [])
+          );
+          // Deduplicate
+          studentCourses = Array.from(new Map(studentCourses.map(c => [c._id, c])).values());
+          console.log("Instructor View - Extracted courses:", studentCourses);
+        }
+      } catch (err) {
+        console.error("Failed to fetch student orders", err);
+      }
+
+      if (res.data?.data) {
+        setSelectedStudent((prev: any) => ({
+          ...prev,
+          ...res.data.data,
+          courses: studentCourses,
+          coursesCount: studentCourses.length
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch student details", err);
+    }
+  };
+
   const fetchUdemyCourses = async () => {
     setLoadingUdemy(true);
     try {
@@ -174,16 +315,36 @@ export default function InstructorDashboard() {
       setUdemyCourses(res.data?.data || []);
     } catch (err) {
       console.error("Failed to fetch Udemy courses", err);
-      toast({ title: "Error", description: "Failed to fetch Udemy courses", variant: "destructive" });
     } finally {
       setLoadingUdemy(false);
     }
   };
 
-  // Refresh Udemy Data
-  const refreshUdemyData = async () => {
-    await fetchUdemyCourses();
-    toast({ title: "Refreshed", description: "Udemy data updated successfully" });
+  const checkUdemyLinkStatus = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/instructor/udemy-status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsUdemyLinked(res.data?.isLinked || false);
+    } catch (err) {
+      setIsUdemyLinked(false);
+    }
+  };
+
+  const fetchLatestCommunities = async () => {
+    setLoadingCommunities(true);
+    try {
+      const posts = await communityService.getAllPosts();
+      // Get latest 5 communities
+      const sortedPosts = Array.isArray(posts)
+        ? posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5)
+        : [];
+      setLatestCommunities(sortedPosts);
+    } catch (error) {
+      console.error("Error fetching communities:", error);
+    } finally {
+      setLoadingCommunities(false);
+    }
   };
 
   useEffect(() => {
@@ -191,12 +352,14 @@ export default function InstructorDashboard() {
       fetchCourses();
       fetchDashboardStats();
       fetchPendingGrading();
+      checkUdemyLinkStatus();
+      fetchLatestCommunities();
     }
   }, [token]);
 
   useEffect(() => {
     if (activeTab === "students") fetchStudents();
-  }, [activeTab]);
+  }, [activeTab, courses]);
 
   useEffect(() => {
     if (activeTab === "udemy") fetchUdemyCourses();
@@ -213,281 +376,670 @@ export default function InstructorDashboard() {
     toast({ title: "Opening grading interface..." });
   };
 
+  const handleEditCourse = (course: Course) => {
+    setFormData({
+      title: course.title,
+      description: course.description || "",
+      price: course.price,
+      category: typeof course.category === 'object' ? course.category._id : course.category,
+      imageCover: course.imageCover,
+    });
+    setEditingProduct(course);
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm(t('dashboard.confirmDeleteCourse') || 'هل أنت متأكد من حذف هذه الدورة؟')) {
+      return;
+    }
+    setDeletingCourseId(courseId);
+    try {
+      await axios.delete(`${API_BASE_URL}/api/v1/products/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast({ title: t('dashboard.courseDeleted') || 'تم حذف الدورة بنجاح' });
+      fetchCourses();
+    } catch (err: any) {
+      console.error("Failed to delete course", err);
+      toast({ title: err.response?.data?.message || t('dashboard.deleteError') || 'فشل حذف الدورة', variant: "destructive" });
+    } finally {
+      setDeletingCourseId(null);
+    }
+  };
+
   const menuItems = [
-    { id: "overview", label: t('dashboard.overview'), icon: <BarChart size={20} /> },
-    { id: "courses", label: t('dashboard.myCourses'), icon: <LayoutDashboard size={20} /> },
+    { id: "overview", label: t('dashboard.overview'), icon: <LayoutDashboard size={20} /> },
+    { id: "courses", label: t('dashboard.myCourses'), icon: <BookOpen size={20} /> },
     { id: "students", label: t('dashboard.students'), icon: <GraduationCap size={20} /> },
-    { id: "udemy", label: t('dashboard.udemyCourses'), icon: <GraduationCap size={20} /> },
+    { id: "chat", label: t('dashboard.chat') || 'الرسائل', icon: <MessageCircle size={20} /> },
+    { id: "livestreams", label: 'بث مباشر', icon: <Video size={20} /> },
+    { id: "notifications", label: t('dashboard.notifications') || 'الإشعارات', icon: <Bell size={20} /> },
+    { id: "analytics", label: t('dashboard.analytics') || 'الإحصائيات', icon: <BarChart size={20} /> },
+    { id: "community", label: t('dashboard.community') || 'المجتمع', icon: <Users size={20} /> },
+    ...(isUdemyLinked ? [{ id: "udemy", label: t('dashboard.udemyCourses'), icon: <Award size={20} /> }] : []),
     { id: "grading", label: t('dashboard.grading'), icon: <ClipboardList size={20} /> },
+    { id: "wallet", label: t('dashboard.wallet') || 'المحفظة', icon: <DollarSign size={20} /> },
     { id: "ai-assistant", label: t('dashboard.aiAssistant'), icon: <Sparkles size={20} /> },
-    { id: "ai-images", label: t('dashboard.aiImages'), icon: <Image size={20} /> },
-    { id: "photopea", label: t('dashboard.photoEditor'), icon: <Image size={20} /> },
+    { id: "photo-studio", label: t('dashboard.photoStudio') || 'استوديو الصور', icon: <Image size={20} /> },
     { id: "video-tools", label: t('dashboard.videoTools'), icon: <FileVideo size={20} /> },
   ];
 
-  const currentDir = i18n.language === "ar" ? "rtl" : "ltr";
+  const getCategoryName = (category: string | { name: string } | undefined): string => {
+    if (!category) return t('home.courses.course');
+    if (typeof category === 'string') return category;
+    return category.name || t('home.courses.course');
+  };
+
+  const currentDir = i18n.language.startsWith("ar") ? "rtl" : "ltr";
 
   return (
-    <div className="flex h-screen bg-[#F4F2EE] font-sans overflow-hidden pt-24" dir={currentDir}>
-      {/* Sidebar */}
-      <aside className="w-[280px] bg-[#1a1c1e] text-gray-400 flex flex-col m-4 rounded-[30px] shadow-2xl overflow-hidden relative">
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-3 mb-8 text-white">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="font-bold text-lg">I</span>
-            </div>
-            <h1 className="text-xl font-bold tracking-brand">Instructor</h1>
-          </div>
-
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium transition-transform active:scale-95 shadow-lg shadow-blue-500/30 mb-8">
-            <PlusCircle size={20} />
-            <span>{t('dashboard.newCourse')}</span>
-          </button>
-
-          <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 ${activeTab === item.id
-                  ? "bg-white text-black shadow-lg font-semibold transform ltr:translate-x-1 rtl:-translate-x-1"
-                  : "hover:bg-white/5 hover:text-gray-200"
-                  }`}
-              >
-                <span className={activeTab === item.id ? "text-blue-500" : ""}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
+    <div className="flex h-screen bg-gray-50 pt-16" dir={currentDir}>
+      {/* Left Icon Sidebar - Fixed */}
+      <aside className="w-[60px] bg-white border-e border-gray-200 flex flex-col items-center py-4 space-y-2 fixed start-0 top-16 h-[calc(100vh-4rem)] z-40">
+        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center cursor-pointer">
+          <span className="text-white font-bold text-xl">W</span>
         </div>
 
-        <div className="mt-auto p-6 border-t border-white/10 mx-6 mb-2">
+        <nav className="flex-1 flex flex-col items-center space-y-2 overflow-y-auto">
+          {[
+            { id: "overview", icon: <LayoutDashboard size={20} /> },
+            { id: "courses", icon: <BookOpen size={20} /> },
+            { id: "students", icon: <Users size={20} /> },
+            { id: "chat", icon: <MessageCircle size={20} /> },
+            { id: "notifications", icon: <Bell size={20} /> },
+            { id: "analytics", icon: <BarChart size={20} /> },
+            { id: "community", icon: <Users size={20} /> },
+            { id: "grading", icon: <ClipboardList size={20} /> },
+            { id: "ai-assistant", icon: <Sparkles size={20} /> },
+            { id: "course-management-ai", icon: <Sparkles size={20} /> },
+            { id: "settings", icon: <Settings size={20} /> }
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${activeTab === item.id
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              title={item.id === "course-management-ai" ? "مساعد إدارة الكورسات" : ""}
+            >
+              {item.icon}
+            </button>
+          ))}
+        </nav>
+
+        <div className="space-y-2">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 text-gray-400 hover:text-red-400 transition-colors"
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-100 hover:text-red-600"
           >
             <LogOut size={20} />
-            <span>{t('dashboard.logout')}</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden p-4 pr-0">
-        {/* Header */}
-        <header className="flex items-center justify-between px-8 py-4 mb-2">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.dashboard')}</h2>
-            <p className="text-gray-500 text-sm">{t('dashboard.welcomeInstructor')}</p>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="relative w-96 hidden md:block">
-              <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${currentDir === 'rtl' ? 'left-4' : 'right-4'}`} size={20} />
-              <Input
-                placeholder={t('dashboard.searchCourses')}
-                className={`w-full bg-white border-none rounded-full py-6 shadow-sm focus-visible:ring-1 focus-visible:ring-blue-500 ${currentDir === 'rtl' ? 'pl-12 pr-6' : 'pr-12 pl-6'}`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
+      <div className="flex-1 flex flex-col overflow-hidden ms-[60px]">
+        {/* Top Header - Fixed below navbar */}
+        <header className="bg-white border-b border-gray-200 px-6 py-3 z-30 shadow-sm fixed top-16 start-[60px] end-0">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button
-                onClick={() => setIsUdemyModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full font-medium"
-              >
-                ربط حساب Udemy
-              </Button>
-              <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors relative">
-                <Bell size={20} className="text-gray-600" />
-              </button>
-
-              <div className={`flex items-center gap-3 ${currentDir === 'rtl' ? 'pr-4 border-r' : 'pl-4 border-l'} border-gray-200`}>
-                <Avatar className="w-12 h-12 border-2 border-white shadow-sm cursor-pointer">
-                  <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback>IN</AvatarFallback>
-                </Avatar>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Dashboard Content */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
-
-          {activeTab === "overview" && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="p-8 border-none shadow-sm rounded-[30px] bg-white flex items-center gap-6">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                    <LayoutDashboard size={32} />
-                  </div>
-                  <div>
-                    <p className="text-gray-500">{t('dashboard.totalCourses')}</p>
-                    <h3 className="text-4xl font-bold text-gray-900">{courses.length}</h3>
-                  </div>
-                </Card>
-                <Card className="p-8 border-none shadow-sm rounded-[30px] bg-white flex items-center gap-6">
-                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-                    <Users size={32} />
-                  </div>
-                  <div>
-                    <p className="text-gray-500">{t('dashboard.totalStudents')}</p>
-                    <h3 className="text-4xl font-bold text-gray-900">{students.length}</h3>
-                  </div>
-                </Card>
-              </div>
-              <InstructorStats stats={dashboardStats} loading={loadingStats} />
-            </div>
-          )}
-
-          {activeTab === "courses" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-800">{t('dashboard.myCourses')}</h3>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                {courses
-                  .filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((course) => (
-                    <Card key={course._id} className="border-none shadow-sm rounded-[24px] overflow-hidden hover:shadow-md transition-all">
-                      <div className="p-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/20">
-                            {course.title.charAt(0)}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-lg text-gray-900">{course.title}</h3>
-                            <p className="text-sm text-gray-500 flex items-center gap-2">
-                              <span>${course.price}</span>
-                              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                              <span>{course.studentsCount || 0} {t('common.students')}</span>
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          className="rounded-full hover:bg-gray-100"
-                          onClick={() => setExpandedCourseId(expandedCourseId === course._id ? null : course._id)}
-                        >
-                          {expandedCourseId === course._id ? <ChevronUp /> : <ChevronDown />}
-                        </Button>
-                      </div>
-                      {expandedCourseId === course._id && (
-                        <div className="bg-gray-50 p-6 border-t border-gray-100">
-                          <CourseAnalytics courseId={course._id} token={token || ""} />
-                        </div>
-                      )}
-                    </Card>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "grading" && (
-            <div className="space-y-6">
-              <PendingGrading items={pendingGrading} loading={loadingPending} onGrade={handleGrade} />
-            </div>
-          )}
-
-          {activeTab === "ai-assistant" && <AiCourseOutlineGenerator />}
-          {activeTab === "ai-images" && <AiImageGenerator />}
-          {activeTab === "photopea" && (
-            <Card className="h-[800px] border-none shadow-sm rounded-[30px] overflow-hidden">
-              <PhotopeaEditor />
-            </Card>
-          )}
-          {activeTab === "video-tools" && <VideoTools />}
-
-          {activeTab === "students" && (
-            <div className="space-y-4">
-              {students.length > 0 ? (
-                students.map((student, i) => (
-                  <Card key={i} className="p-4 border-none shadow-sm rounded-[20px] flex justify-between items-center">
-                    <div className="flex gap-4 items-center">
-                      <Avatar>
-                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h4 className="font-bold">{student.name}</h4>
-                        <p className="text-sm text-gray-500">{student.email}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-blue-600">{student.courseTitle}</p>
-                      <p className="text-xs text-gray-400">{new Date(student.joinedAt).toLocaleDateString()}</p>
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-10 text-gray-500">{t('dashboard.noStudentsFound')}</div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "udemy" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-800">{t('dashboard.udemyCourses')}</h3>
-                <Button onClick={refreshUdemyData} disabled={loadingUdemy} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {loadingUdemy ? "Refreshing..." : "Refresh"}
-                </Button>
-              </div>
-              {loadingUdemy ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <Avatar className="w-12 h-12 border-2 border-gray-200">
+                <AvatarImage
+                  src={getImageUrl(dashboardStats?.instructor?.profileImg, 'users') || `https://api.dicebear.com/7.x/initials/svg?seed=${dashboardStats?.instructor?.name || 'IN'}`}
+                  crossOrigin="anonymous"
+                />
+                <AvatarFallback>{dashboardStats?.instructor?.name?.[0] || 'IN'}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="font-bold text-gray-900">{dashboardStats?.instructor?.name || "Amali Brown"}</h2>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <span><b className="text-gray-900">{dashboardStats?.instructor?.totalCourses || courses.length}</b> {t('dashboard.projects')}</span>
+                  <span><b className="text-gray-900">{dashboardStats?.instructor?.totalStudents || 0}</b> {t('dashboard.students')}</span>
+                  <span className="flex items-center gap-1 text-green-600 font-bold">
+                    <DollarSign size={14} />
+                    {Number(dashboardStats?.instructor?.walletBalance || 0).toFixed(2)}
+                  </span>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {udemyCourses.length > 0 ? (
-                    udemyCourses
-                      .filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map((course) => (
-                        <Card key={course.id} className="border-none shadow-sm rounded-[24px] overflow-hidden hover:shadow-md transition-all">
-                          <div className="p-6">
-                            <div className="flex items-center gap-4">
-                              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-red-500/20">
-                                U
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="font-bold text-lg text-gray-900">{course.title}</h3>
-                                <p className="text-sm text-gray-500 flex items-center gap-2">
-                                  <span>{course.price}</span>
-                                  <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                  <span>{course.num_lectures} lectures</span>
-                                  <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                  <span>{course.rating} ⭐ ({course.num_reviews} reviews)</span>
-                                  {course.num_students && (
-                                    <>
-                                      <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                                      <span>{course.num_students} students</span>
-                                    </>
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="mt-4 flex justify-end">
-                              <Button variant="outline" onClick={() => window.open(course.url, '_blank')}>
-                                View on Udemy
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      ))
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {(dashboardStats?.students || []).slice(0, 5).map((student: any, i: number) => (
+                <Avatar key={i} className="w-10 h-10 border-2 border-white shadow-sm cursor-pointer hover:scale-110 transition-transform">
+                  <AvatarImage
+                    src={getImageUrl(student.profileImg, 'users') || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(student.name)}`}
+                    crossOrigin="anonymous"
+                  />
+                  <AvatarFallback>{student.name?.[0]}</AvatarFallback>
+                </Avatar >
+              ))}
+              {
+                (dashboardStats?.students?.length || 0) > 5 && (
+                  <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-white shadow-sm flex items-center justify-center text-xs font-bold text-gray-500">
+                    +{(dashboardStats?.students?.length || 0) - 5}
+                  </div>
+                )
+              }
+            </div >
+
+            <div className="flex items-center gap-3">
+              <ChatButton variant="support" className="hidden sm:flex" />
+
+              <Button
+                onClick={() => setShowAddProductModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+              >
+                <PlusCircle size={18} className="me-2" />
+                {t('dashboard.newCourse')}
+              </Button>
+
+              {!isUdemyLinked && (
+                <Button
+                  onClick={() => setIsUdemyModalOpen(true)}
+                  variant="outline"
+                  className="px-4 py-2 rounded-lg"
+                >
+                  {t('dashboard.linkUdemy') || 'ربط Udemy'}
+                </Button>
+              )}
+
+              <button className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100">
+                <Search size={20} className="text-gray-600" />
+              </button>
+              <NotificationBell onViewAll={() => setActiveTab('notifications')} />
+            </div>
+          </div >
+        </header >
+
+        <div className="flex-1 flex overflow-hidden mt-[56px]">
+          {/* Left Sidebar Menu - Fixed */}
+          <aside className="w-52 bg-white border-e border-gray-200 overflow-y-auto fixed start-[60px] top-[120px] h-[calc(100vh-120px)] z-20">
+            <div className="p-6 space-y-6">
+              <div className="relative">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  placeholder={t('dashboard.searchPlaceholder')}
+                  className="ps-10 bg-gray-50 border-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <nav className="space-y-1">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-start ${activeTab === item.id
+                      ? "bg-blue-50 text-blue-600 font-medium"
+                      : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                  >
+                    {item.icon}
+                    <span className="text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              <div className="pt-6 border-t border-gray-200">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3 text-start">
+                  {t('dashboard.latestCommunities') || 'آخر المجتمعات'}
+                </h3>
+                <div className="space-y-2">
+                  {loadingCommunities ? (
+                    <div className="text-sm text-gray-400">{t('common.loading') || 'جاري التحميل...'}</div>
+                  ) : latestCommunities.length > 0 ? (
+                    latestCommunities.map((community, i) => {
+                      const categoryColors: Record<string, string> = {
+                        'General': 'bg-blue-500',
+                        'Programming': 'bg-green-500',
+                        'Career': 'bg-purple-500',
+                        'Help': 'bg-orange-500',
+                        'Showcase': 'bg-pink-500'
+                      };
+                      const dotColor = categoryColors[community.category] || 'bg-gray-500';
+                      return (
+                        <div
+                          key={community._id}
+                          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/community?post=${community._id}`)}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${dotColor}`}></div>
+                          <span className="truncate" title={community.title}>{community.title}</span>
+                        </div>
+                      );
+                    })
                   ) : (
-                    <div className="text-center py-10 text-gray-500">
-                      No Udemy courses found. Link your Udemy account to get started.
-                    </div>
+                    <div className="text-sm text-gray-400">{t('dashboard.noCommunities') || 'لا توجد مجتمعات بعد'}</div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
-          )}
-        </div>
-      </main>
+          </aside>
 
-      <UdemyLinkModal isOpen={isUdemyModalOpen} onClose={() => setIsUdemyModalOpen(false)} />
-    </div>
+          {/* Main Content with offset for sidebars */}
+          <main className="flex-1 overflow-y-auto bg-gray-50 p-4 ms-52">
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-6">
+                  {[
+                    { key: 'feed', label: t('dashboard.feed') || 'Feed' },
+                    { key: 'following', label: t('dashboard.following') || 'Following' },
+                    { key: 'recentWorks', label: t('dashboard.recentWorks') || 'Recent Works' }
+                  ].map((tab, i) => (
+                    <Button
+                      key={i}
+                      variant={i === 0 ? "default" : "outline"}
+                      className={`rounded-full ${i === 0 ? 'bg-blue-600' : ''}`}
+                      size="sm"
+                    >
+                      {tab.label}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-4 gap-6">
+                  <Card className="p-6 bg-white border-none shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <BookOpen className="text-blue-600" size={20} />
+                      </div>
+                      <TrendingUp className="text-green-500" size={16} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">{courses.length}</h3>
+                    <p className="text-sm text-gray-500">{t('dashboard.totalCourses')}</p>
+                  </Card>
+
+                  <Card className="p-6 bg-white border-none shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Users className="text-green-600" size={20} />
+                      </div>
+                      <TrendingUp className="text-green-500" size={16} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">{dashboardStats?.instructor?.totalStudents || students.length || 0}</h3>
+                    <p className="text-sm text-gray-500">{t('dashboard.totalStudents')}</p>
+                  </Card>
+
+                  <Card className="p-6 bg-white border-none shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <DollarSign className="text-orange-600" size={20} />
+                      </div>
+                      <TrendingUp className="text-green-500" size={16} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">${Number(dashboardStats?.totalRevenue || 0).toFixed(2)}</h3>
+                    <p className="text-sm text-gray-500">{t('dashboard.revenue')}</p>
+                  </Card>
+
+                  <Card className="p-6 bg-white border-none shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Award className="text-purple-600" size={20} />
+                      </div>
+                      <TrendingUp className="text-green-500" size={16} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">{Number(dashboardStats?.completionRate || 0).toFixed(2)}%</h3>
+                    <p className="text-sm text-gray-500">{t('dashboard.completionRate')}</p>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
+                  {courses.slice(0, 6).map((course, i) => {
+                    const gradients = [
+                      'from-purple-400 via-pink-400 to-blue-400',
+                      'from-blue-400 via-cyan-400 to-teal-400',
+                      'from-orange-400 via-red-400 to-pink-400',
+                      'from-green-400 via-emerald-400 to-cyan-400',
+                      'from-yellow-400 via-orange-400 to-red-400',
+                      'from-indigo-400 via-purple-400 to-pink-400'
+                    ];
+
+                    const courseStats = dashboardStats?.courses?.find((c: any) => c.course._id === course._id) || {};
+                    const studentCount = courseStats.enrolledStudents || course.studentsCount || 0;
+                    const commentCount = courseStats.comments || course.comments || 0;
+                    const rating = courseStats.averageRating || course.rating || 0;
+                    const imageUrl = course.imageCover
+                      ? (course.imageCover.startsWith('http') ? course.imageCover : `${API_BASE_URL}/products/${course.imageCover}`)
+                      : null;
+
+                    return (
+                      <Card key={course._id} className="bg-white border-none shadow-sm overflow-hidden group hover:shadow-md transition-all">
+                        <div className={`relative h-48 ${!imageUrl ? `bg-gradient-to-br ${gradients[i % gradients.length]}` : 'bg-gray-100'}`}>
+                          {imageUrl ? (
+                            <>
+                              <img
+                                src={getImageUrl(imageUrl, 'products') || ""} // imageUrl already handled some part but let's use helper consistently if possible, or just apply crossOrigin
+                                alt={course.title}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                crossOrigin="anonymous"
+                              />
+                              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
+                            </>
+                          ) : (
+                            <div className="h-full flex items-center justify-center text-white text-5xl font-bold">
+                              {course.title.charAt(0)}
+                            </div>
+                          )}
+
+                          <div className="absolute top-4 end-4 flex gap-2 z-10">
+                            <button
+                              onClick={() => navigate(`/course/${course._id}`)}
+                              className="w-8 h-8 bg-blue-600/90 backdrop-blur rounded-lg flex items-center justify-center text-white hover:bg-blue-700 transition-colors shadow-sm"
+                              title={t('common.view') || 'عرض'}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEditCourse(course)}
+                              className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-colors shadow-sm"
+                              title={t('dashboard.editCourse') || 'تعديل'}
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCourse(course._id)}
+                              disabled={deletingCourseId === course._id}
+                              className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50 shadow-sm"
+                              title={t('dashboard.deleteCourse') || 'حذف'}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="p-5">
+                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{course.title}</h3>
+                          <p className="text-sm text-gray-500 mb-4 line-clamp-2 min-h-[40px]">
+                            {course.description || t('dashboard.noDescription') || 'لا يوجد وصف متاح لهذا الكورس.'}
+                          </p>
+                          <div className="flex items-center justify-between border-t pt-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1.5 text-gray-600 bg-gray-100 px-2 py-1 rounded-md text-xs font-medium">
+                                <Users size={14} className="text-blue-500" />
+                                <span>{studentCount} {t('dashboard.students')}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-gray-600 hover:text-blue-600 transition-colors text-xs font-medium cursor-pointer">
+                                <MessageSquare size={14} />
+                                <span>{commentCount}</span>
+                              </div>
+                              {rating > 0 && (
+                                <div className="flex items-center gap-1 text-xs font-bold text-amber-500">
+                                  <span>★</span>
+                                  <span>{Number(rating).toFixed(2)}</span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-lg font-bold text-green-600">${Number(course.price || 0).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "courses" && (
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold">{t('dashboard.myCourses')}</h3>
+                <div className="grid grid-cols-3 gap-6">
+                  {courses.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase())).map((course) => {
+                    const courseStats = dashboardStats?.courses?.find((c: any) => c.course._id === course._id) || {};
+                    const enrolledCount = courseStats.enrolledStudents || course.studentsCount || 0;
+
+                    return (
+                      <Card key={course._id} className="overflow-hidden hover:shadow-md transition-all">
+                        <div className="relative h-48 bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center text-white text-5xl font-bold">
+                          {course.imageCover ? (
+                            <img
+                              src={getImageUrl(course.imageCover, 'products') || ""}
+                              alt={course.title}
+                              className="w-full h-full object-cover"
+                              crossOrigin="anonymous"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              {course.title.charAt(0)}
+                            </div>
+                          )}
+                          <div className="absolute top-4 end-4 flex gap-2">
+                            <button
+                              onClick={() => navigate(`/course/${course._id}`)}
+                              className="w-8 h-8 bg-blue-600/90 backdrop-blur rounded-lg flex items-center justify-center text-white hover:bg-blue-700 transition-colors shadow-sm"
+                              title={t('common.view') || 'عرض'}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEditCourse(course)}
+                              className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center hover:bg-blue-500 hover:text-white transition-colors"
+                              title={t('dashboard.editCourse') || 'تعديل'}
+                            >
+                              <Edit size={16} className="text-gray-700 hover:text-white" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCourse(course._id)}
+                              disabled={deletingCourseId === course._id}
+                              className="w-8 h-8 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                              title={t('dashboard.deleteCourse') || 'حذف'}
+                            >
+                              <Trash2 size={16} className="text-gray-700 hover:text-white" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-bold mb-2">{course.title}</h3>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>${Number(course.price || 0).toFixed(2)}</span>
+                            <span>{enrolledCount} {t('dashboard.students')}</span>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "wallet" && (
+              <InstructorWallet token={token || ""} />
+            )}
+
+            {activeTab === "livestreams" && (
+              <LiveStreamManager token={token || ""} />
+            )}
+
+            {activeTab === "students" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold">{t('dashboard.myStudents')}</h2>
+                  {!selectedStudent && <p className="text-gray-500">{(dashboardStats?.students || []).length} {t('dashboard.students')}</p>}
+                </div>
+
+                {selectedStudent ? (
+                  <UserProfileDetail
+                    user={selectedStudent}
+                    currentUserRole="instructor"
+                    onBack={() => setSelectedStudent(null)}
+                    onChat={() => {
+                      setChatRecipient(selectedStudent._id);
+                      setActiveTab("chat");
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {(dashboardStats?.students || []).map((student: any) => (
+                        <UserCard
+                          key={student._id}
+                          user={{
+                            ...student,
+                            role: 'Student'
+                          }}
+                          onClick={() => handleStudentClick(student)}
+                        />
+                      ))}
+                    </div>
+                    {(dashboardStats?.students || []).length === 0 && (
+                      <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-gray-200">
+                        <Users size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-500 font-medium">{t('dashboard.noStudentsFound') || 'لم يتم العثور على طلاب مسجلين بعد'}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === "grading" && <PendingGrading items={pendingGrading} loading={loadingPending} onGrade={handleGrade} />}
+            {activeTab === "ai-assistant" && <AiCourseOutlineGenerator />}
+            {activeTab === "course-management-ai" && (
+              <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl bg-white">
+                <CourseManagementAI
+                  courses={courses}
+                  students={students}
+                  token={token}
+                  onAction={(action, data) => {
+                    if (action === 'refresh') {
+                      fetchCourses();
+                      fetchStudents();
+                    }
+                  }}
+                />
+              </div>
+            )}
+            {/* Persist Photo Studio State */}
+            <div style={{ display: activeTab === "photo-studio" ? 'block' : 'none' }}>
+              {(visitedTabs.has("photo-studio") || activeTab === "photo-studio") && <AIPhotopeaStudio />}
+            </div>
+
+            {/* Persist Video Tools State */}
+            <div style={{ display: activeTab === "video-tools" ? 'block' : 'none' }}>
+              {(visitedTabs.has("video-tools") || activeTab === "video-tools") && <VideoTools />}
+            </div>
+
+            {/* Persist Chat State */}
+            <div style={{ display: activeTab === "chat" ? 'block' : 'none' }} className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl">
+              {(visitedTabs.has("chat") || activeTab === "chat") && <ChatDashboardWidget variant="full" targetUserId={chatRecipient} />}
+            </div>
+
+            {activeTab === "notifications" && (
+              <div className="bg-white rounded-2xl p-8 shadow-sm">
+                <UserNotifications />
+              </div>
+            )}
+
+            {activeTab === "analytics" && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold mb-4">{t('dashboard.analytics') || 'الإحصائيات'}</h2>
+                {expandedCourseId ? (
+                  <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <Button variant="outline" size="sm" onClick={() => setExpandedCourseId(null)}>
+                        {t('common.back') || 'عودة'}
+                      </Button>
+                      <span className="font-bold text-lg">
+                        {courses.find(c => c._id === expandedCourseId)?.title}
+                      </span>
+                    </div>
+                    <CourseAnalytics courseId={expandedCourseId} token={token || ''} />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {courses.map(course => (
+                      <Card
+                        key={course._id}
+                        className="cursor-pointer hover:shadow-md transition-all"
+                        onClick={() => setExpandedCourseId(course._id)}
+                      >
+                        <div className="p-6">
+                          <h3 className="font-bold mb-2">{course.title}</h3>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>{course.studentsCount || 0} {t('dashboard.students')}</span>
+                            <BarChart size={16} className="text-blue-500" />
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+
+            {activeTab === "community" && (
+              <div className="bg-white rounded-2xl p-8 shadow-sm">
+                <CommunityContent />
+              </div>
+            )}
+
+            {activeTab === "udemy" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold">{t('dashboard.udemyCourses')}</h3>
+                  <Button onClick={fetchUdemyCourses} disabled={loadingUdemy}>
+                    {loadingUdemy ? t('dashboard.updating') : t('dashboard.update')}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  {udemyCourses.map((course) => (
+                    <Card key={course.id} className="p-4">
+                      <h3 className="font-bold mb-2">{course.title}</h3>
+                      <div className="flex justify-between text-sm">
+                        <span>{course.price}</span>
+                        <span>{Number(course.rating || 0).toFixed(2)} ⭐</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "settings" && (
+              <ProfileSettings
+                user={dashboardStats?.instructor || { name: 'Instructor' }}
+                token={token || ''}
+                onUpdate={(updated) => {
+                  fetchDashboardStats();
+                  toast({ title: "Profile Updated" });
+                }}
+              />
+            )}
+          </main>
+        </div>
+      </div >
+
+      {showAddProductModal && (
+        <AddProductModal
+          show={showAddProductModal}
+          onClose={() => setShowAddProductModal(false)}
+          token={token || ''}
+          fetchProducts={fetchCourses}
+        />
+      )}
+
+      {
+        editingProduct && (
+          <EditProductModal
+            product={editingProduct}
+            formData={formData}
+            setFormData={setFormData}
+            setEditingProduct={setEditingProduct}
+            fetchProducts={fetchCourses}
+            token={token || ''}
+          />
+        )
+      }
+
+      <UdemyLinkModal
+        isOpen={isUdemyModalOpen}
+        onClose={() => setIsUdemyModalOpen(false)}
+        onSuccess={() => {
+          setIsUdemyLinked(true);
+          fetchUdemyCourses();
+          toast({ title: t('common.success'), description: t('dashboard.udemyLinkedSuccess') || "تم ربط حساب Udemy بنجاح" });
+        }}
+      />
+    </div >
   );
 }

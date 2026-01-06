@@ -5,18 +5,24 @@ import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 import { API_BASE_URL } from '@/config/env';
 import { CurriculumEditor, Section } from "@/components/admin/CurriculumEditor";
+import { Video, Link as LinkIcon, Upload, Gift } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Course {
   _id?: string;
   title: string;
   description: string;
   price: number;
+  isFree?: boolean;
   quantity?: number;
   category?: string;
   imageCover?: File | string | null;
   images?: File[] | string[];
   whatWillYouLearn?: string[];
   curriculum?: Section[];
+  previewVideo?: File | string | null;
+  previewVideoUrl?: string;
 }
 
 interface Props {
@@ -30,14 +36,18 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
     title: "",
     description: "",
     price: 0,
+    isFree: false,
     quantity: 1,
     category: "",
     imageCover: null,
     images: [],
     whatWillYouLearn: [],
     curriculum: [],
+    previewVideo: null,
+    previewVideoUrl: "",
   });
   const [loading, setLoading] = useState(false);
+  const [videoInputType, setVideoInputType] = useState<'file' | 'url'>('url');
   const { toast } = useToast();
   const token = localStorage.getItem("token");
   const instructorId = localStorage.getItem("instructorId");
@@ -48,13 +58,19 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
         title: course.title,
         description: course.description,
         price: course.price,
+        isFree: course.isFree || false,
         quantity: course.quantity || 1,
         category: course.category as string || "",
         imageCover: course.imageCover || null,
         images: course.images || [],
         whatWillYouLearn: course.whatWillYouLearn || [],
         curriculum: course.curriculum || [],
+        previewVideo: course.previewVideo || null,
+        previewVideoUrl: course.previewVideoUrl || "",
       });
+      // Set input type based on existing data
+      if (course.previewVideoUrl) setVideoInputType('url');
+      else if (course.previewVideo) setVideoInputType('file');
     }
   }, [course]);
 
@@ -66,10 +82,12 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: "imageCover" | "images"
+    field: "imageCover" | "images" | "previewVideo"
   ) => {
     if (field === "imageCover") {
       setFormData({ ...formData, imageCover: e.target.files?.[0] || null });
+    } else if (field === "previewVideo") {
+      setFormData({ ...formData, previewVideo: e.target.files?.[0] || null });
     } else {
       setFormData({
         ...formData,
@@ -79,15 +97,22 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.description || !formData.price || !formData.category) {
+    // Validation - price not required for free courses
+    if (!formData.title || !formData.description || !formData.category) {
       toast({ title: "يرجى ملء جميع الحقول المطلوبة" });
+      return;
+    }
+
+    if (!formData.isFree && (!formData.price || formData.price <= 0)) {
+      toast({ title: "يرجى تحديد سعر الكورس أو اختيار كورس مجاني" });
       return;
     }
 
     const fd = new FormData();
     fd.append("title", formData.title);
     fd.append("description", formData.description);
-    fd.append("price", formData.price.toString());
+    fd.append("price", (formData.isFree ? 0 : formData.price).toString());
+    fd.append("isFree", formData.isFree ? "true" : "false");
     fd.append("quantity", (formData.quantity || 1).toString());
     fd.append("category", formData.category);
     fd.append("instructor", instructorId || "");
@@ -107,6 +132,14 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
       formData.images.forEach((img) => {
         if (img instanceof File) fd.append("images", img);
       });
+    }
+
+    // Preview Video - either file or URL
+    if (formData.previewVideo instanceof File) {
+      fd.append("previewVideo", formData.previewVideo);
+    }
+    if (formData.previewVideoUrl && formData.previewVideoUrl.trim()) {
+      fd.append("previewVideoUrl", formData.previewVideoUrl.trim());
     }
 
     setLoading(true);
@@ -154,14 +187,31 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
                   onChange={handleChange}
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">السعر</label>
+              {/* Free Course Toggle */}
+              <div className="md:col-span-2 flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-3">
+                  <Gift className="h-5 w-5 text-green-600" />
+                  <div>
+                    <Label htmlFor="isFree" className="text-sm font-bold text-green-800">كورس مجاني</Label>
+                    <p className="text-xs text-green-600">تفعيل هذا الخيار يجعل الكورس متاحاً مجاناً للجميع</p>
+                  </div>
+                </div>
+                <Switch
+                  id="isFree"
+                  checked={formData.isFree || false}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isFree: checked, price: checked ? 0 : formData.price })}
+                />
+              </div>
+
+              <div className={formData.isFree ? "opacity-50 pointer-events-none" : ""}>
+                <label className="text-sm font-medium mb-1 block">السعر {formData.isFree && <span className="text-green-600 text-xs">(مجاني)</span>}</label>
                 <Input
                   name="price"
                   type="number"
                   placeholder="السعر"
-                  value={formData.price}
+                  value={formData.isFree ? 0 : formData.price}
                   onChange={handleChange}
+                  disabled={formData.isFree}
                 />
               </div>
               <div>
@@ -215,6 +265,63 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Preview Video Section */}
+          <div className="space-y-4 border p-4 rounded-lg bg-purple-50/50">
+            <h3 className="font-semibold text-lg border-b pb-2 flex items-center gap-2">
+              <Video className="w-5 h-5 text-purple-600" />
+              فيديو التشويق (اختياري)
+            </h3>
+            <p className="text-sm text-gray-500">
+              هذا الفيديو يظهر عند مرور الماوس على بطاقة الكورس لجذب انتباه الطلاب.
+            </p>
+
+            {/* Toggle between file and URL */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                type="button"
+                variant={videoInputType === 'url' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setVideoInputType('url')}
+                className="flex items-center gap-2"
+              >
+                <LinkIcon size={16} /> رابط خارجي (YouTube)
+              </Button>
+              <Button
+                type="button"
+                variant={videoInputType === 'file' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setVideoInputType('file')}
+                className="flex items-center gap-2"
+              >
+                <Upload size={16} /> رفع ملف
+              </Button>
+            </div>
+
+            {videoInputType === 'url' ? (
+              <div>
+                <label className="text-sm font-medium mb-1 block">رابط الفيديو (YouTube, Vimeo, إلخ)</label>
+                <Input
+                  name="previewVideoUrl"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={formData.previewVideoUrl || ""}
+                  onChange={handleChange}
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium mb-1 block">رفع ملف فيديو</label>
+                <Input
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => handleFileChange(e, "previewVideo")}
+                />
+                {formData.previewVideo && typeof formData.previewVideo === 'string' && (
+                  <p className="text-xs text-green-600 mt-1">فيديو حالي: {formData.previewVideo}</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Curriculum Editor Section */}

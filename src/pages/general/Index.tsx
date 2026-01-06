@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/config/env";
 import { getImageUrl } from "@/utils/imageUtils";
 import axios from "axios";
-import { ArrowRight, Play, Users } from "lucide-react";
+import { ArrowRight, Play, Users, TrendingUp, Star, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import CampaignBanner from "@/components/campaigns/CampaignBanner";
@@ -12,21 +12,14 @@ import FeaturesSection from "@/components/home/FeaturesSection";
 import FeaturedCoursesSection from "@/components/home/FeaturedCoursesSection";
 import PartnersSection from "@/components/home/PartnersSection";
 import CTASection from "@/components/home/CTASection";
+import HeroBannerSlider from "@/components/home/HeroBannerSlider";
+import { discoveryService, HomePageData, Course } from "@/services/discoveryService";
 
 import SEO from "@/components/SEO";
 import Footer from "@/components/layout/Footer";
 
-interface Course {
-  _id: string;
-  title: string;
-  description: string;
-  price: number;
-  imageCover?: string;
-  category?: { name: string };
-}
-
 const Index = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [homeData, setHomeData] = useState<HomePageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [visitorCount, setVisitorCount] = useState(0);
@@ -35,12 +28,27 @@ const Index = () => {
   const { t } = useTranslation();
 
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/v1/products?sort=-createdAt`);
-        setCourses(res.data?.data?.slice(0, 6) || []);
+        // Fetch home page data using discovery service
+        const data = await discoveryService.getHomePageData();
+        setHomeData(data);
       } catch (error) {
-        console.error("Failed to fetch courses:", error);
+        console.error("Failed to fetch home data:", error);
+        // Fallback to old method
+        try {
+          const res = await axios.get(`${API_BASE_URL}/api/v1/products`);
+          const courses = res.data?.data?.slice(0, 6) || [];
+          setHomeData({
+            trending: courses,
+            featured: courses,
+            newCourses: courses,
+            bestsellers: courses,
+            freeCourses: courses.filter((c: Course) => c.isFree || c.price === 0)
+          });
+        } catch (e) {
+          console.error(e);
+        }
       } finally {
         setLoading(false);
       }
@@ -55,7 +63,7 @@ const Index = () => {
       }
     };
 
-    fetchCourses();
+    fetchData();
     fetchVisitors();
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -169,29 +177,22 @@ const Index = () => {
               >
                 {t('home.hero.browseCourses')}
               </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 h-14 text-lg hover:scale-105 transition-transform bg-white gap-2"
+                onClick={() => navigate("/instructors")}
+              >
+                <Users size={20} />
+                {t('home.hero.instructors') || 'مدربينا'}
+              </Button>
             </motion.div>
 
-            {/* Hero Image / Dashboard Preview */}
-            <motion.div
-              initial={{ opacity: 0, y: 40, rotateX: 10 }}
-              animate={{ opacity: 1, y: 0, rotateX: 0 }}
-              transition={{ duration: 1, delay: 0.8 }}
-              className="mt-20 relative mx-auto max-w-4xl perspective-1000"
-              style={{
-                transform: `rotateX(${mousePosition.y * 5}deg) rotateY(${mousePosition.x * 5}deg)`
-              }}
-            >
-              <div className="absolute -inset-1 bg-gradient-to-r from-sky-500 to-blue-500 rounded-2xl blur opacity-20 animate-pulse"></div>
-              <div className="relative bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-2 shadow-2xl transform transition-transform duration-200">
-                <img
-                  src="/images/background.png.jpg"
-                  alt="Platform Preview"
-                  className="w-full rounded-xl shadow-inner"
-                  style={{ minHeight: '400px', objectFit: 'cover' }}
-                />
-
-              </div>
-            </motion.div>
+            {/* Hero Image / Dashboard Preview - Now with Dynamic Banners */}
+            <HeroBannerSlider
+              defaultImage="/images/background.png.jpg"
+              mousePosition={mousePosition}
+            />
           </div>
         </header>
 
@@ -228,7 +229,7 @@ const Index = () => {
                 viewport={{ once: true }}
                 className="grid md:grid-cols-3 gap-8"
               >
-                {courses.map((course) => (
+                {(homeData?.featured || []).map((course) => (
                   <motion.div
                     key={course._id}
                     variants={{
@@ -312,6 +313,8 @@ const Index = () => {
               className="relative"
             >
               <div className="flex gap-8 animate-scroll">
+
+
                 {/* Duplicate partners for seamless loop */}
                 {[
                   ...[
@@ -378,8 +381,8 @@ const Index = () => {
             0% {
               transform: translateX(0);
             }
-            100% {
-              transform: translateX(-50%);
+            90% {
+              transform: translateX(-100%);
             }
           }
           

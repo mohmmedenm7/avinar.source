@@ -15,9 +15,11 @@ interface LoginResponse {
   role?: string;
   message?: string;
   data?: {
-    email?: string;
-    role?: string;
-    _id?: string;
+    user?: {
+      email?: string;
+      role?: string;
+      _id?: string;
+    };
   };
 }
 
@@ -35,7 +37,7 @@ const Login = () => {
     if (token && role) {
       if (role === "admin") navigate("/AdminDashboard", { replace: true });
       else if (role === "manager" || role === "instructor") navigate("/InstructorDashboard", { replace: true });
-      else navigate("/UserDashboard", { replace: true });
+      else navigate("/courses", { replace: true });
     }
   }, [navigate]);
 
@@ -58,9 +60,9 @@ const Login = () => {
       }
 
       const token = data.token;
-      const userEmail = data.data?.email;
-      const role = data.data?.role ?? "user";
-      const userId = data.data?._id;
+      const userEmail = data.data?.user?.email;
+      const role = data.data?.user?.role ?? "user";
+      const userId = data.data?.user?._id;
 
       if (!token || !userEmail) {
         alert("استجابة غير صحيحة من السيرفر.");
@@ -76,7 +78,7 @@ const Login = () => {
 
       if (role === "admin") navigate("/AdminDashboard", { replace: true });
       else if (role === "manager" || role === "instructor") navigate("/InstructorDashboard", { replace: true });
-      else navigate("/UserDashboard", { replace: true });
+      else navigate("/courses", { replace: true });
 
     } catch (err) {
       console.error(err);

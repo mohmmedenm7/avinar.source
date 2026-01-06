@@ -1,0 +1,767 @@
+{
+  "info": {
+    "name": "Chat API Testing",
+    "description": "مجموعة كاملة لاختبار API الشات",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login Student 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('TOKEN_STUDENT1', jsonData.token);",
+                  "pm.environment.set('STUDENT1_ID', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"student1@example.com\",\"password\":\"Password123!\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Student 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('TOKEN_STUDENT2', jsonData.token);",
+                  "pm.environment.set('STUDENT2_ID', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"student2@example.com\",\"password\":\"Password123!\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Instructor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('TOKEN_INSTRUCTOR', jsonData.token);",
+                  "pm.environment.set('INSTRUCTOR_ID', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"instructor@example.com\",\"password\":\"Password123!\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('TOKEN_ADMIN', jsonData.token);",
+                  "pm.environment.set('ADMIN_ID', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@example.com\",\"password\":\"Password123!\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations - Student to Student",
+      "item": [
+        {
+          "name": "Create Conversation S1 to S2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('CONV_ID_S1_S2', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"participantId\":\"{{STUDENT2_ID}}\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/conversations",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "conversations"]
+            }
+          }
+        },
+        {
+          "name": "Send Message 'السلام عليكم' 📱",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('MSG_ID_1', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{CONV_ID_S1_S2}}\",\"content\":\"السلام عليكم ورحمة الله وبركاته 😊\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Send Message with Emoji 🌟✨",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{CONV_ID_S1_S2}}\",\"content\":\"كيف حالك؟ 🌟✨ هل تمكنت من حل الواجب؟\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Student 2 Replies 💬",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT2}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{CONV_ID_S1_S2}}\",\"content\":\"وعليكم السلام ورحمة الله! 👋 الحمد لله بخير، نعم تمكنت الحمد لله 🎉\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/conversations/{{CONV_ID_S1_S2}}/messages?page=1&limit=50",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "conversations", "{{CONV_ID_S1_S2}}", "messages"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/conversations?limit=10&skip=0",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "conversations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "skip",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations - Student to Instructor",
+      "item": [
+        {
+          "name": "Create Conversation S1 to Instructor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('CONV_ID_S1_INSTR', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"participantId\":\"{{INSTRUCTOR_ID}}\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/conversations",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "conversations"]
+            }
+          }
+        },
+        {
+          "name": "Student Asks Question 🤔",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{CONV_ID_S1_INSTR}}\",\"content\":\"السلام عليكم دكتور، هل يمكنك شرح درس البرمجة الكائنية التوجه؟ لم أفهمها جيداً 😟\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Instructor Explains 📚",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_INSTRUCTOR}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{CONV_ID_S1_INSTR}}\",\"content\":\"وعليكم السلام ورحمة الله! بكل سرور 😊\\n\\nالبرمجة الكائنية التوجه (OOP) تعتمد على 4 أركان أساسية:\\n1. التغليف (Encapsulation)\\n2. الوراثة (Inheritance)\\n3. التعدد الشكلي (Polymorphism)\\n4. التجريد (Abstraction)\\n\\nهل تريد شرح أي منها بالتفصيل؟ 🎓\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Support",
+      "item": [
+        {
+          "name": "Create Support Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('SUPPORT_CONV_ID', jsonData.data._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"subject\":\"مشكلة في الدفع\",\"description\":\"لم أستقبل الكورس رغم أنني دفعت من أسبوع\",\"priority\":\"high\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/admin-support",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "admin-support"]
+            }
+          }
+        },
+        {
+          "name": "Student Sends Details 💳",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{SUPPORT_CONV_ID}}\",\"content\":\"رقم الطلب: 12345\\nرقم بطاقتي الآخيرة: 4532\\nالمبلغ المدفوع: 299.99 ريال\\n\\nبرجاء حل المشكلة في أقرب وقت 🙏\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Admin Views Support Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_ADMIN}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/admin/support?status=waiting&priority=high",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "admin", "support"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "waiting"
+                },
+                {
+                  "key": "priority",
+                  "value": "high"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Replies to Support ✅",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_ADMIN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{SUPPORT_CONV_ID}}\",\"content\":\"السلام عليكم ورحمة الله 🙏\\n\\nشكراً لتواصلك معنا. لقد تحقققنا من الطلب وتبين أن المشكلة تقنية من جانب نظام الدفع.\\n\\nتم إعادة تفعيل الكورس في حسابك الآن ✅\\n\\nيمكنك الوصول للكورس من خلال لوحة التحكم.\\n\\nشكراً لصبرك 🌟\",\"messageType\":\"text\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Admin Updates Support Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_ADMIN}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"resolved\",\"notes\":\"تم حل المشكلة - إعادة تفعيل الكورس\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/admin/support/{{SUPPORT_CONV_ID}}/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "admin", "support", "{{SUPPORT_CONV_ID}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Message Management",
+      "item": [
+        {
+          "name": "Edit Message",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\":\"السلام عليكم ورحمة الله وبركاته 😊 (معدل)\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages/{{MSG_ID_1}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages", "{{MSG_ID_1}}"]
+            }
+          }
+        },
+        {
+          "name": "Pin Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pinned\":true}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages/{{MSG_ID_1}}/pin",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages", "{{MSG_ID_1}}", "pin"]
+            }
+          }
+        },
+        {
+          "name": "Search Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/search?q=السلام&limit=20",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "السلام"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/conversations/{{CONV_ID_S1_S2}}/read",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "conversations", "{{CONV_ID_S1_S2}}", "read"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "item": [
+        {
+          "name": "Error: Empty Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversationId\":\"{{CONV_ID_S1_S2}}\",\"content\":\"\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Error: Message to Yourself",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{TOKEN_STUDENT1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"participantId\":\"{{STUDENT1_ID}}\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/v1/chat/conversations",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["api", "v1", "chat", "conversations"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

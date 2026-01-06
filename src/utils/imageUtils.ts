@@ -25,6 +25,20 @@ export const getImageUrl = (imagePath: string | undefined): string => {
         return cleanedPath;
     }
 
+    // Handle missing folder prefixes if necessary
+    if (!cleanedPath.includes('/')) {
+        if (cleanedPath.startsWith('user-')) {
+            cleanedPath = `users/${cleanedPath}`;
+        } else if (cleanedPath.startsWith('category-')) {
+            cleanedPath = `categories/${cleanedPath}`;
+        } else if (cleanedPath.startsWith('brand-')) {
+            cleanedPath = `brands/${cleanedPath}`;
+        } else {
+            // Default to products/ for other images without a path (like react-course.jpg)
+            cleanedPath = `products/${cleanedPath}`;
+        }
+    }
+
     // Otherwise, prepend the API_BASE_URL
     return `${import.meta.env.VITE_API_BASE_URL}/${cleanedPath}`;
 };

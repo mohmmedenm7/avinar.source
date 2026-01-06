@@ -77,7 +77,7 @@ const CourseAnalytics = ({ courseId, token }: CourseAnalyticsProps) => {
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
                             <p className="text-sm text-purple-600 font-medium">معدل الإكمال</p>
-                            <p className="text-2xl font-bold text-purple-900">{analytics?.completionRate || 0}%</p>
+                            <p className="text-2xl font-bold text-purple-900">{Number(analytics?.completionRate || 0).toFixed(2)}%</p>
                         </div>
                         <TrendingUp className="text-purple-400" size={24} />
                     </CardContent>
@@ -134,7 +134,7 @@ const CourseAnalytics = ({ courseId, token }: CourseAnalyticsProps) => {
                             {students.slice(0, 5).map((student: any) => (
                                 <tr key={student._id}>
                                     <td className="px-4 py-2 font-medium">{student.name}</td>
-                                    <td className="px-4 py-2 text-blue-600">{student.progress || 0}%</td>
+                                    <td className="px-4 py-2 text-blue-600">{Number(student.progress || 0).toFixed(2)}%</td>
                                     <td className="px-4 py-2 text-gray-500">
                                         {new Date(student.joinedAt).toLocaleDateString('ar-EG')}
                                     </td>
