@@ -540,14 +540,7 @@ const AdminDashboard = () => {
 
                         <div className="flex items-center gap-4">
                             {/* Quick Chat Button */}
-                            <button
-                                onClick={() => setActiveTab('chat')}
-                                className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105 relative"
-                                title={t('dashboard.chat') || 'الرسائل'}
-                            >
-                                <MessageCircle size={20} className="text-white" />
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white">3</span>
-                            </button>
+
 
                             {/* Quick Helpdesk Button */}
                             <button
@@ -560,7 +553,7 @@ const AdminDashboard = () => {
 
                             <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors relative">
                                 <Bell size={20} className="text-gray-600" />
-                                <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+
                             </button>
 
                             <div className={`flex items-center gap-3 ${currentDir === 'rtl' ? 'pr-4 border-r' : 'pl-4 border-l'} border-gray-200`}>
@@ -855,7 +848,7 @@ const AdminDashboard = () => {
                         {activeTab === "hero-banners" && <HeroBannerManager token={token || ""} />}
                         {activeTab === "course-management-ai" && (
                             <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl bg-white">
-                                <CourseManagementAI 
+                                <CourseManagementAI
                                     courses={allCourses}
                                     students={allStudents}
                                     token={token}

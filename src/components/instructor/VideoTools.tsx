@@ -11,6 +11,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import VideoEditorAI from './VideoEditorAI';
 import PropertiesPanel, { Clip } from './PropertiesPanel';
+import GraphEditor from './GraphEditor';
 import LayersPanel from './LayersPanel';
 import ColorGradingControls from './ColorGradingControls';
 import { Button } from '@/components/ui/button';
@@ -88,7 +89,8 @@ export default function VideoTools() {
     const [activeTab, setActiveTab] = useState<'media' | 'properties'>('media');
 
     // Layout State - Optimized for visibility
-    const [layout, setLayout] = useState({ timelineHeight: 250, sidebarWidth: 260 });
+    const [layout, setLayout] = useState({ timelineHeight: 150, sidebarWidth: 260 });
+    const [bottomTab, setBottomTab] = useState<'timeline' | 'graph'>('timeline');
     const [showColorGrading, setShowColorGrading] = useState(false);
     const [resizingPanel, setResizingPanel] = useState<{ type: 'timeline' | 'sidebar', startPos: number, startSize: number } | null>(null);
 
@@ -107,6 +109,7 @@ export default function VideoTools() {
 
     // AI & Canvas
     const [isAIChannelOpen, setIsAIChannelOpen] = useState(false);
+    const [isGraphEditorOpen, setIsGraphEditorOpen] = useState(false);
     const [canvasBackgroundColor, setCanvasBackgroundColor] = useState('#121212');
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, options: { label: string, action: () => void }[] } | null>(null);
 
@@ -114,9 +117,32 @@ export default function VideoTools() {
     const [history, setHistory] = useState<{ clips: Clip[]; tracks: Track[]; bg: string }[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
 
+    // Auto-switch to properties for tools
+    useEffect(() => {
+        if (toolMode !== 'select') {
+            setActiveTab('properties');
+        }
+        if (isGraphEditorOpen) {
+            setBottomTab('graph');
+        } else {
+            setBottomTab('timeline');
+        }
+    }, [toolMode, isGraphEditorOpen]);
+
     // Refs
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null);
+
+    // Auto-open AI Assistant on component load
+    useEffect(() => {
+        // Open AI chat after a short delay for better UX
+        const timer = setTimeout(() => {
+            setIsAIChannelOpen(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, []);
+
+
     const timelineRef = useRef<HTMLDivElement>(null);
     const tracksContainerRef = useRef<HTMLDivElement>(null);
 
@@ -170,6 +196,22 @@ export default function VideoTools() {
         setHistoryIndex(newHistory.length - 1);
     }, [clips, tracks, canvasBackgroundColor, history, historyIndex]);
 
+    const toggleBrowserFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch((err) => {
+                toast({
+                    title: "Fullscreen Error",
+                    description: err.message,
+                    variant: "destructive",
+                });
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
+
     // --- Interaction Handlers ---
 
     // --- Actions (Hoisted) ---
@@ -214,6 +256,31 @@ export default function VideoTools() {
         }
         saveToHistory();
         toast({ title: 'تم الحذف', duration: 1000 });
+    };
+
+    const findAvailableTrack = (type: 'video' | 'audio', startAt: number, duration: number, currentTracks: Track[], currentClips: Clip[]) => {
+        const relevantTracks = currentTracks.filter(t => t.type === type);
+
+        for (const track of relevantTracks) {
+            const hasOverlap = currentClips.some(c =>
+                c.trackId === track.id &&
+                !(startAt + duration <= c.startAt || startAt >= c.startAt + ((c.trimEnd - c.trimStart) / c.speed))
+            );
+            if (!hasOverlap) return { trackId: track.id, newTracks: currentTracks };
+        }
+
+        const newId = currentTracks.length > 0 ? Math.max(...currentTracks.map(t => t.id)) + 1 : 1;
+        const color = type === 'video' ? '#3B82F6' : '#F59E0B';
+        const newTrack: Track = {
+            id: newId,
+            type,
+            label: `${type === 'video' ? 'Video' : 'Audio'} ${newId}`,
+            visible: true,
+            muted: false,
+            locked: false,
+            color
+        };
+        return { trackId: newId, newTracks: [...currentTracks, newTrack] };
     };
 
     const splitClip = (id: string, time?: number) => {
@@ -293,15 +360,21 @@ export default function VideoTools() {
 
     const addTextClip = (initial?: Partial<Clip>) => {
         const id = crypto.randomUUID();
+        const startAt = initial?.startAt ?? currentTime;
+        const duration = initial?.duration ?? 5;
+
+        const { trackId, newTracks } = findAvailableTrack('video', startAt, duration, tracks, clips);
+        if (newTracks.length > tracks.length) setTracks(newTracks);
+
         const newClip: Clip = {
             id,
-            trackId: 1,
+            trackId,
             type: 'text',
             name: initial?.textContent || 'نص جديد',
-            startAt: currentTime,
-            duration: 5,
+            startAt,
+            duration,
             trimStart: 0,
-            trimEnd: 5,
+            trimEnd: duration,
             textContent: initial?.textContent || 'نص جديد',
             textStyle: { fontSize: 60, color: '#ffffff', fontFamily: 'Arial', bold: true, ...initial?.textStyle },
             transform: { ...defaultTransform, ...initial?.transform },
@@ -311,7 +384,7 @@ export default function VideoTools() {
             speed: 1,
             ...initial
         };
-        newClip.id = id; // Ensure ID is unique even if passed in initial
+        newClip.id = id;
         setClips(prev => [...prev, newClip]);
         setSelectedClipIds([id]);
         saveToHistory();
@@ -321,19 +394,28 @@ export default function VideoTools() {
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
+
+        let currentTracksState = [...tracks];
+        let currentClipsState = [...clips];
+
         Array.from(files).forEach((file, index) => {
             const url = URL.createObjectURL(file);
             const type = file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : 'image';
+            const startTime = currentTime + (index * 2); // Stagger by 2s
+            const duration = 5;
+
+            const { trackId, newTracks } = findAvailableTrack(type === 'audio' ? 'audio' : 'video', startTime, duration, currentTracksState, currentClipsState);
+            currentTracksState = newTracks;
 
             const newClip: Clip = {
                 id: crypto.randomUUID(),
-                trackId: type === 'audio' ? tracks.find(t => t.type === 'audio')?.id || 1 : 1,
+                trackId,
                 type: type as any,
                 name: file.name,
-                startAt: currentTime + (index * 5),
-                duration: 10,
+                startAt: startTime,
+                duration,
                 trimStart: 0,
-                trimEnd: 10,
+                trimEnd: duration,
                 url,
                 transform: { ...defaultTransform },
                 color: { ...defaultColor },
@@ -342,25 +424,23 @@ export default function VideoTools() {
                 speed: 1
             };
 
-            // Get duration/thumbnail for videos
             if (type === 'video') {
                 const video = document.createElement('video');
                 video.src = url;
                 video.onloadedmetadata = () => {
                     newClip.duration = video.duration;
                     newClip.trimEnd = video.duration;
-                    setClips(prev => [...prev]); // Trigger re-render to update
+                    setClips(prev => prev.map(c => c.id === newClip.id ? { ...c, duration: video.duration, trimEnd: video.duration } : c));
                 };
             }
-            if (type === 'image') {
-                newClip.duration = 5;
-                newClip.trimEnd = 5;
-            }
 
-            setClips(prev => [...prev, newClip]);
+            currentClipsState.push(newClip);
         });
+
+        setTracks(currentTracksState);
+        setClips(currentClipsState);
         saveToHistory();
-        toast({ title: 'تمت إضافة الملفات' });
+        toast({ title: 'تمت إضافة الملفات في طبقات منظمة' });
     };
 
     const finishDrawing = (isClosed: boolean = true) => {
@@ -1122,11 +1202,11 @@ export default function VideoTools() {
     };
 
     // --- AI ---
-    const handleAIAction = (intent: string, entities: any) => {
+    const handleAIAction = useCallback((intent: string, entities: any) => {
         console.log('AI Action:', intent, entities);
 
         const resolveColor = (c: string) => {
-            if (!c) return '#000000';
+            if (!c) return '#FFFFFF';
             const clean = c.toLowerCase().trim();
             const map: any = {
                 'ابيض': '#FFFFFF', 'أبيض': '#FFFFFF', 'white': '#FFFFFF', 'بيضاء': '#FFFFFF',
@@ -1141,48 +1221,81 @@ export default function VideoTools() {
                 'بنفسجي': '#8B5CF6', 'purple': '#8B5CF6',
                 'زهري': '#EC4899', 'pink': '#EC4899', 'وردي': '#EC4899',
             };
-            return map[clean] || (clean.startsWith('#') ? clean : '#000000');
+            return map[clean] || (clean.startsWith('#') ? clean : '#FFFFFF');
         };
 
+        const currentSelectionId = selectedClipIds[0];
+
         switch (intent) {
-            case 'add_track': addTrack(entities.type || 'video'); break;
+            case 'add_track':
+                addTrack(entities.type || 'video');
+                break;
+
             case 'add_text':
                 addTextClip({
-                    textContent: entities.text,
+                    textContent: entities.text || 'نص جديد',
                     transform: {
                         ...defaultTransform,
                         x: entities.x ?? 0,
                         y: entities.y ?? 0,
                         scale: entities.scale ?? 100
                     },
-                    textStyle: entities.color ? { fontSize: 60, color: resolveColor(entities.color), fontFamily: 'Arial', bold: true } : undefined
+                    textStyle: {
+                        fontSize: 80,
+                        color: resolveColor(entities.color),
+                        fontFamily: 'Arial',
+                        bold: true,
+                        shadow: true
+                    }
                 });
                 break;
+
             case 'split_clip':
-                if (selectedClipIds.length > 0) splitClip(selectedClipIds[0]);
+                if (currentSelectionId) splitClip(currentSelectionId);
                 break;
+
             case 'delete_clip':
                 if (selectedClipIds.length > 0) {
-                    // Delete all selected
                     setClips(prev => prev.filter(c => !selectedClipIds.includes(c.id)));
                     setSelectedClipIds([]);
                     saveToHistory();
-                    toast({ title: 'تم الحذف', description: `Deleted ${selectedClipIds.length} clips` });
+                    toast({ title: 'تم الحذف', description: `تم حذف ${selectedClipIds.length} عنصر` });
                 }
                 break;
+
             case 'change_speed':
-                if (selectedClipIds.length > 0) updateClip(selectedClipIds[0], { speed: entities.value || 1.5 });
+                if (currentSelectionId) updateClip(currentSelectionId, { speed: entities.value || 1.5 });
                 break;
-            case 'seek': setCurrentTime(entities.time || 0); break;
-            case 'play_pause': setIsPlaying(!isPlaying); break;
-            case 'undo_redo': entities.type === 'redo' ? redo() : undo(); break;
+
+            case 'seek':
+                setCurrentTime(entities.time || 0);
+                break;
+
+            case 'play_pause':
+                setIsPlaying(!isPlaying);
+                break;
+
+            case 'undo_redo':
+                entities.type === 'redo' ? redo() : undo();
+                break;
+
             case 'animate_clip':
                 {
                     const targetText = entities.text;
-                    // Smart Selection: Prioritize text match, then current selection
-                    let found = targetText ? clips.find(c => c.textContent?.includes(targetText) || (c.name && c.name.includes(targetText))) : null;
-                    if (!found && selectedClipIds.length > 0) {
-                        found = clips.find(c => c.id === selectedClipIds[0]);
+                    let foundClip = targetText ? clips.find(c => c.textContent?.includes(targetText) || c.name?.includes(targetText)) : null;
+
+                    // Improved Fallback: If no specific clip found by name, try current selection, 
+                    // then try the LAST added text clip (most likely what they want to animate)
+                    if (!foundClip) {
+                        if (currentSelectionId) {
+                            foundClip = clips.find(c => c.id === currentSelectionId) || null;
+                        } else {
+                            // Find latest text clip
+                            const textClips = clips.filter(c => c.type === 'text');
+                            if (textClips.length > 0) {
+                                foundClip = textClips[textClips.length - 1];
+                            }
+                        }
                     }
 
                     const animData = {
@@ -1192,40 +1305,34 @@ export default function VideoTools() {
                         endTime: entities.endTime !== undefined ? entities.endTime : 5
                     };
 
-                    if (found) {
-                        updateClip(found.id, { animation: animData });
-                        toast({ title: 'بدء التحريك', description: `تم تفعيل تأثير ${entities.type} على "${found.textContent || found.name}"` });
-                    } else if (targetText) {
-                        const id = crypto.randomUUID();
-                        const newClip: Clip = {
-                            id,
-                            trackId: 1,
-                            type: 'text',
-                            name: `Anim: ${targetText}`,
-                            startAt: currentTime,
-                            duration: 15,
-                            trimStart: 0,
-                            trimEnd: 15,
+                    if (foundClip) {
+                        // If animation starts from "middle" (وسط), reset X/Y before animating
+                        if (intent === 'animate_clip' && (entities.fromMid || targetText?.includes('وسط'))) {
+                            updateClip(foundClip.id, {
+                                transform: { ...foundClip.transform, x: 0, y: 0 },
+                                animation: animData
+                            });
+                        } else {
+                            updateClip(foundClip.id, { animation: animData });
+                        }
+                        toast({ title: 'تم برمجة الحركة', description: `تفعيل تأثير ${entities.type} على "${foundClip.textContent || foundClip.name}"` });
+                    } else if (targetText && targetText.length > 1) {
+                        // Create NEW clip only if targetText is meaningful
+                        addTextClip({
                             textContent: targetText,
-                            textStyle: { fontSize: 80, color: '#ffffff', fontFamily: 'Arial', bold: true },
-                            transform: { ...defaultTransform, scale: 1.2 },
-                            color: { ...defaultColor },
                             animation: animData,
-                            audio: { ...defaultAudio },
-                            speed: 1
-                        };
-                        setClips(prev => [...prev, newClip]);
-                        setSelectedClipIds([id]);
-                        toast({ title: 'تمت الإضافة والتحريك (محلي)', description: `إنشاء "${targetText}" مع حركة ${entities.type}` });
+                            transform: { ...defaultTransform, scale: 120 }
+                        });
+                        toast({ title: 'تمت الإضافة والتحريك', description: `إنشاء "${targetText}" مع حركة ${entities.type}` });
                     } else {
-                        toast({ title: 'تنبيه', description: 'يرجى تحديد عنصر أو كتابة اسمه أولاً لتحريكه.', variant: 'destructive' });
+                        toast({ title: 'تنبيه', description: 'لم يتم العثور على نص لتحريكه. يرجى إضافة نص أولاً.', variant: 'destructive' });
                     }
                 }
                 break;
+
             case 'update_transform':
-                if (selectedClipIds.length > 0) {
-                    const targetId = selectedClipIds[0];
-                    const clip = clips.find(c => c.id === targetId);
+                if (currentSelectionId) {
+                    const clip = clips.find(c => c.id === currentSelectionId);
                     if (clip) {
                         const current = clip.transform;
                         const updates: any = {};
@@ -1233,7 +1340,7 @@ export default function VideoTools() {
                             if (entities.x) updates.x = current.x + entities.x;
                             if (entities.y) updates.y = current.y + entities.y;
                             if (entities.scale) updates.scale = current.scale * entities.scale;
-                            if (entities.rotation) updates.rotation = current.rotation + entities.rotation;
+                            if (entities.rotation) updates.rotation = (current.rotation || 0) + (entities.rotation || 0);
                         } else {
                             if (entities.x !== undefined) updates.x = entities.x;
                             if (entities.y !== undefined) updates.y = entities.y;
@@ -1242,14 +1349,9 @@ export default function VideoTools() {
                         }
 
                         const newTransform = { ...current, ...updates };
-
-                        // If AI wants to auto-keyframe this change
                         if (entities.keyframe || (clip.keyframes && clip.keyframes.length > 0)) {
                             const timeInClip = currentTime - clip.startAt;
-                            const newKeyframe = {
-                                time: timeInClip,
-                                ...newTransform
-                            };
+                            const newKeyframe = { time: timeInClip, ...newTransform };
                             const kfs = [...(clip.keyframes || [])];
                             const idx = kfs.findIndex(kf => Math.abs(kf.time - timeInClip) < 0.1);
                             if (idx >= 0) kfs[idx] = newKeyframe;
@@ -1257,14 +1359,14 @@ export default function VideoTools() {
                                 kfs.push(newKeyframe);
                                 kfs.sort((a, b) => a.time - b.time);
                             }
-                            updateClip(targetId, { transform: newTransform, keyframes: kfs });
+                            updateClip(currentSelectionId, { transform: newTransform, keyframes: kfs });
                         } else {
-                            updateClip(targetId, { transform: newTransform });
+                            updateClip(currentSelectionId, { transform: newTransform });
                         }
-                        toast({ title: 'تم التعديل' });
                     }
                 }
                 break;
+
             case 'select_clip':
                 {
                     const query = entities.query || entities.text || entities.name;
@@ -1280,10 +1382,10 @@ export default function VideoTools() {
                     }
                 }
                 break;
+
             case 'add_keyframe':
-                if (selectedClipIds.length > 0) {
-                    const targetId = selectedClipIds[0];
-                    const clip = clips.find(c => c.id === targetId);
+                if (currentSelectionId) {
+                    const clip = clips.find(c => c.id === currentSelectionId);
                     if (clip) {
                         const timeInClip = currentTime - clip.startAt;
                         const newKeyframe = {
@@ -1291,7 +1393,7 @@ export default function VideoTools() {
                             x: entities.x !== undefined ? entities.x : clip.transform.x,
                             y: entities.y !== undefined ? entities.y : clip.transform.y,
                             scale: entities.scale !== undefined ? entities.scale : clip.transform.scale,
-                            rotation: entities.rotation !== undefined ? entities.rotation : clip.transform.rotation,
+                            rotation: entities.rotation !== undefined ? entities.rotation : (clip.transform.rotation || 0),
                             opacity: entities.opacity !== undefined ? entities.opacity : clip.transform.opacity
                         };
                         const kfs = [...(clip.keyframes || [])];
@@ -1301,11 +1403,12 @@ export default function VideoTools() {
                             kfs.push(newKeyframe);
                             kfs.sort((a, b) => a.time - b.time);
                         }
-                        updateClip(targetId, { keyframes: kfs });
+                        updateClip(currentSelectionId, { keyframes: kfs });
                         toast({ title: 'تم إضافة مفتاح حركة' });
                     }
                 }
                 break;
+
             case 'smart_layout':
                 {
                     const layoutType = entities.type || 'grid';
@@ -1338,18 +1441,17 @@ export default function VideoTools() {
                         }
                         return { ...c, transform: { ...c.transform, x: tx, y: ty, scale: ts } };
                     }));
-                    toast({ title: 'AI Layout Applied', description: `Arranged ${activeClips.length} clips in ${layoutType} mode` });
+                    toast({ title: 'AI Layout Applied', description: `Arranged ${activeClips.length} clips` });
                 }
                 break;
+
             case 'auto_animate':
-                if (selectedClipIds.length > 0) {
-                    const targetId = selectedClipIds[0];
-                    const clip = clips.find(c => c.id === targetId);
+                if (currentSelectionId) {
+                    const clip = clips.find(c => c.id === currentSelectionId);
                     if (clip) {
                         const duration = entities.duration || 1;
                         const type = entities.type || 'pop-in';
                         const kfs: any[] = [];
-
                         if (type === 'pop-in') {
                             kfs.push({ time: 0, x: clip.transform.x, y: clip.transform.y, scale: 0, rotation: 0, opacity: 0 });
                             kfs.push({ time: duration * 0.7, x: clip.transform.x, y: clip.transform.y, scale: clip.transform.scale * 1.1, rotation: 5, opacity: 100 });
@@ -1358,58 +1460,92 @@ export default function VideoTools() {
                             kfs.push({ time: 0, x: clip.transform.x - 100, y: clip.transform.y, scale: clip.transform.scale, rotation: 0, opacity: 0 });
                             kfs.push({ time: duration, x: clip.transform.x, y: clip.transform.y, scale: clip.transform.scale, rotation: 0, opacity: 100 });
                         }
-
-                        updateClip(targetId, { keyframes: kfs });
-                        toast({ title: 'AI Animation Applied', description: `Generated ${type} effect` });
+                        updateClip(currentSelectionId, { keyframes: kfs });
+                        toast({ title: 'AI Animation Applied' });
                     }
                 }
                 break;
+
+            case 'animate_with_keyframes':
+                {
+                    const targetText = entities.text;
+                    let foundClip = targetText ? clips.find(c => c.textContent?.includes(targetText) || c.name?.includes(targetText)) : null;
+
+                    if (!foundClip) {
+                        if (currentSelectionId) {
+                            foundClip = clips.find(c => c.id === currentSelectionId) || null;
+                        } else {
+                            const textClips = clips.filter(c => c.type === 'text');
+                            if (textClips.length > 0) foundClip = textClips[textClips.length - 1];
+                        }
+                    }
+
+                    if (foundClip && entities.keyframes) {
+                        updateClip(foundClip.id, {
+                            keyframes: entities.keyframes,
+                            // Clear legacy animation to prioritize keyframes
+                            animation: undefined
+                        });
+                        toast({ title: 'برمجة الحركة بالكي-فريمز', description: `تم توليد ${entities.keyframes.length} نقاط حركة مخصصة` });
+                    }
+                }
+                break;
+
+            case 'set_tool':
+                if (entities.tool) {
+                    setToolMode(entities.tool);
+                    toast({ title: 'تغيير الأداة', description: `تم تفعيل أداة ${entities.tool}` });
+                }
+                break;
+
+            case 'set_mode':
+                if (entities.mode) {
+                    setMode(entities.mode);
+                    toast({ title: 'تغيير الوضع', description: `تم التبديل إلى وضع ${entities.mode}` });
+                }
+                break;
+
+            case 'toggle_graph_editor':
+                setIsGraphEditorOpen(entities.open ?? true);
+                setBottomTab('graph');
+                toast({ title: 'محرر المنحنيات', description: 'تم تفعيل محرر المنحنيات' });
+                break;
+
+            case 'export_project':
+                setIsExportDialogOpen(true);
+                break;
+
             case 'update_color_grading':
-                if (selectedClipIds.length > 0) {
-                    const targetId = selectedClipIds[0];
-                    const clip = clips.find(c => c.id === targetId);
+                if (currentSelectionId) {
+                    const clip = clips.find(c => c.id === currentSelectionId);
                     if (clip) {
-                        const current = clip.color;
-                        const updates: any = { ...current };
-
-                        if (entities.brightness !== undefined) updates.brightness = entities.brightness;
-                        if (entities.contrast !== undefined) updates.contrast = entities.contrast;
-                        if (entities.saturation !== undefined) updates.saturation = entities.saturation;
-                        if (entities.temperature !== undefined) updates.temperature = entities.temperature;
-                        if (entities.vignette !== undefined) updates.vignette = entities.vignette;
-                        if (entities.hue !== undefined) updates.hue = entities.hue;
-
-                        updateClip(targetId, { color: updates });
-                        toast({ title: 'تم تعديل الألوان بواسطة AI', description: 'Color Grading Applied' });
+                        updateClip(currentSelectionId, { color: { ...clip.color, ...entities } });
                         setShowColorGrading(true);
+                        toast({ title: 'تم تعديل الألوان' });
                     }
-                } else {
-                    toast({ title: 'يررجى تحديد فيديو أولاً لتلوينه', variant: 'destructive' });
                 }
                 break;
+
             case 'set_canvas_background':
-                const bg = resolveColor(entities.color);
-                setCanvasBackgroundColor(bg);
-                toast({ title: 'تم تغيير الخلفية', description: bg });
+                setCanvasBackgroundColor(resolveColor(entities.color));
                 break;
+
             case 'set_dual_background':
-                const c1 = resolveColor(entities.color1 || '#F97316');
-                const c2 = resolveColor(entities.color2 || '#3B82F6');
-                setCanvasBackgroundColor(`DUAL:${c1}:${c2}`);
-                toast({ title: 'تم تقسيم الخلفية', description: `${c1} | ${c2}` });
+                const co1 = resolveColor(entities.color1 || '#F97316');
+                const co2 = resolveColor(entities.color2 || '#3B82F6');
+                setCanvasBackgroundColor(`DUAL:${co1}:${co2}`);
                 break;
+
             case 'set_text_color':
-                if (selectedClipIds.length > 0) {
-                    const targetId = selectedClipIds[0];
-                    const clip = clips.find(c => c.id === targetId);
+                if (currentSelectionId) {
+                    const clip = clips.find(c => c.id === currentSelectionId);
                     if (clip && clip.type === 'text') {
-                        updateClip(targetId, { textStyle: { ...clip.textStyle!, color: resolveColor(entities.color) } });
-                        toast({ title: 'تم تغيير اللون' });
+                        updateClip(currentSelectionId, { textStyle: { ...clip.textStyle!, color: resolveColor(entities.color) } });
                     }
                 }
                 break;
         }
-    };
+    }, [clips, currentTime, isPlaying, selectedClipIds, undo, redo, addTrack, addTextClip, splitClip, updateClip, saveToHistory, toast, setClips, setSelectedClipIds, setCurrentTime, setIsPlaying, setCanvasBackgroundColor, setShowColorGrading]);
 
     // --- Rendering ---
     const drawFrame = useCallback(() => {
@@ -1755,49 +1891,32 @@ export default function VideoTools() {
                     <Cloud size={14} className="text-green-500" />
                     <span className="hidden sm:inline">محفوظ</span>
                 </div>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0 border-gray-700 hover:bg-gray-800" onClick={toggleBrowserFullscreen} title="ملء الشاشة (البرنامج)">
+                    <Maximize2 size={14} />
+                </Button>
                 <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-500 h-7 text-xs" onClick={handleExport}>
                     تصدير <Download size={14} className="ml-2" />
                 </Button>
                 <span className="bg-gray-800 px-3 py-1 rounded-full font-mono text-blue-400">{formatTime(currentTime)} / {formatTime(totalDuration)}</span>
+
+                <div className="mx-4 flex items-center bg-gray-900/50 rounded-lg p-0.5 border border-white/5 gap-0.5 shadow-inner">
+                    <div className="flex items-center gap-0.5 px-1 border-r border-white/10 mr-1">
+                        <Button variant={toolMode === 'pen' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7 p-1.5" onClick={() => setToolMode('pen')} title="Pen Tool (P)"><PenTool className="w-full h-full" /></Button>
+                        <Button variant={toolMode === 'hand' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7 p-1.5" onClick={() => setToolMode('hand')} title="Hand Tool (H)"><Hand className="w-full h-full" /></Button>
+                        <Button variant={toolMode === 'zoom' ? 'secondary' : 'ghost'} size="icon" className="h-7 w-7 p-1.5" onClick={() => setToolMode('zoom')} title="Zoom Tool (Z)"><ZoomIn className="w-full h-full" /></Button>
+                    </div>
+
+                    <div className="flex items-center gap-1 px-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 p-1.5" onClick={() => addTextClip()} title="Type Tool (T)"><TypeIcon className="w-full h-full" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 p-1.5 text-purple-400 hover:bg-purple-500/10" onClick={() => setIsAIChannelOpen(true)} title="AI Assistant"><Wand2 className="w-full h-full" /></Button>
+                    </div>
+                </div>
             </div>
 
             {/* Right Side: Logo & Menus */}
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1 h-full">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 px-3 text-xs hover:text-white font-normal">عرض</Button></DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 bg-[#1a1d21] border-gray-700 text-white">
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setZoom(z => Math.min(100, z + 10))}><ZoomIn className="mr-2 h-4 w-4" /> تكبير</DropdownMenuItem>
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setZoom(z => Math.max(10, z - 10))}><ZoomOut className="mr-2 h-4 w-4" /> تصغير</DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-gray-700" />
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setIsFullscreen(!isFullscreen)}>
-                                {isFullscreen ? <Minimize2 className="mr-2 h-4 w-4" /> : <Maximize2 className="mr-2 h-4 w-4" />} {isFullscreen ? 'إنهاء ملء الشاشة' : 'ملء الشاشة'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setIsProxyMode(!isProxyMode)}>
-                                <MonitorPlay className="mr-2 h-4 w-4" /> {isProxyMode ? 'جودة كاملة' : 'وضع البروكسي (أسرع)'}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 px-3 text-xs hover:text-white font-normal">تعديل</Button></DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56 bg-[#1a1d21] border-gray-700 text-white">
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={undo} disabled={historyIndex <= 0}>
-                                <Undo className="mr-2 h-4 w-4" /> تراجع
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={redo} disabled={historyIndex >= history.length - 1}>
-                                <Redo className="mr-2 h-4 w-4" /> إعادة
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-gray-700" />
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => toolMode === 'split' ? setToolMode('select') : setToolMode('split')}>
-                                <Scissors className="mr-2 h-4 w-4" /> {toolMode === 'split' ? 'وضع التحديد' : 'وضع القص'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="focus:bg-red-600 cursor-pointer text-red-400 focus:text-white" onClick={() => selectedClipIds.length > 0 && selectedClipIds.forEach(id => deleteClip(id))}>
-                                <Trash2 className="mr-2 h-4 w-4" /> حذف المحدد
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
+                    {/* 1. ملف */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 px-3 text-xs hover:text-white font-normal">ملف</Button></DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56 bg-[#1a1d21] border-gray-700 text-white">
@@ -1818,10 +1937,10 @@ export default function VideoTools() {
                         </DropdownMenuContent>
                     </DropdownMenu>
 
+                    {/* 2. أدوات */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 px-3 text-xs hover:text-white font-normal">أدوات</Button></DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56 bg-[#1a1d21] border-gray-700 text-white">
-
                             {/* 1. Edit Page (Montage) */}
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger className="text-xs py-1 focus:bg-blue-600 cursor-pointer">
@@ -1861,15 +1980,9 @@ export default function VideoTools() {
                                     <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>
                                         Curves
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Nodes
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Qualifier
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Power Window
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Nodes</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Qualifier</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Power Window</DropdownMenuItem>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
@@ -1879,18 +1992,10 @@ export default function VideoTools() {
                                     المؤثرات البصرية (Fusion)
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent className="w-48 bg-[#1a1d21] border-gray-700 text-white">
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        NodesChain
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>
-                                        Transform
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Merge
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Masking
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">NodesChain</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>Transform</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Merge</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Masking</DropdownMenuItem>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
@@ -1900,75 +2005,30 @@ export default function VideoTools() {
                                     الصوت (Fairlight)
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent className="w-48 bg-[#1a1d21] border-gray-700 text-white">
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>
-                                        Mixer
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>
-                                        EQ
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Compressor
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Limiter
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>Mixer</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>EQ</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Compressor</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">Limiter</DropdownMenuItem>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
                             <DropdownMenuSeparator className="bg-gray-700 my-1" />
 
-                            {/* 5. After Effects (Motion) */}
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger className="text-xs py-1 focus:bg-blue-600 cursor-pointer">
                                     مؤثرات وحركة (After Effects)
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent className="w-48 bg-[#1a1d21] border-gray-700 text-white">
-                                    <DropdownMenuLabel className="text-[10px] text-gray-500 font-normal uppercase tracking-wider">أدوات التحرير</DropdownMenuLabel>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('select')}>
-                                        Selection Tool <DropdownMenuShortcut>V</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('hand')}>
-                                        Hand Tool <DropdownMenuShortcut>H</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('zoom')}>
-                                        Zoom Tool <DropdownMenuShortcut>Z</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setActiveTab('properties')}>
-                                        Rotation Tool <DropdownMenuShortcut>W</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Pan Behind <DropdownMenuShortcut>Y</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('pen')}>
-                                        Pen / Shapes <DropdownMenuShortcut>G/P</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => addTextClip()}>
-                                        Text Tool <DropdownMenuShortcut>Ctrl+T</DropdownMenuShortcut>
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuSeparator className="bg-gray-700 my-1" />
-                                    <DropdownMenuLabel className="text-[10px] text-gray-500 font-normal uppercase tracking-wider">أنيميشن</DropdownMenuLabel>
-
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Keyframes
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Graph Editor
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1">
-                                        Parenting
-                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('hand')}>Hand Tool</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('zoom')}>Zoom Tool</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => addTextClip()}>Text Tool</DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setToolMode('pen')}>Pen Tool</DropdownMenuItem>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
-
-                            <DropdownMenuSeparator className="bg-gray-700 my-1" />
-
-                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer text-xs py-1" onClick={() => setIsAIChannelOpen(true)}>
-                                المساعد الذكي
-                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
 
+                    {/* 3. تعديل */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 px-3 text-xs hover:text-white font-normal">تعديل</Button></DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56 bg-[#1a1d21] border-gray-700 text-white">
@@ -1984,6 +2044,22 @@ export default function VideoTools() {
                             </DropdownMenuItem>
                             <DropdownMenuItem className="focus:bg-red-600 cursor-pointer text-red-400 focus:text-white" onClick={() => selectedClipIds.length > 0 && selectedClipIds.forEach(id => deleteClip(id))}>
                                 <Trash2 className="mr-2 h-4 w-4" /> حذف المحدد
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* 4. عرض */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 px-3 text-xs hover:text-white font-normal">عرض</Button></DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56 bg-[#1a1d21] border-gray-700 text-white">
+                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setZoom(z => Math.min(100, z + 10))}><ZoomIn className="mr-2 h-4 w-4" /> تكبير</DropdownMenuItem>
+                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setZoom(z => Math.max(10, z - 10))}><ZoomOut className="mr-2 h-4 w-4" /> تصغير</DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-gray-700" />
+                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setIsFullscreen(!isFullscreen)}>
+                                {isFullscreen ? <Minimize2 className="mr-2 h-4 w-4" /> : <Maximize2 className="mr-2 h-4 w-4" />} {isFullscreen ? 'إنهاء ملء الشاشة' : 'ملء الشاشة'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="focus:bg-blue-600 cursor-pointer" onClick={() => setIsProxyMode(!isProxyMode)}>
+                                <MonitorPlay className="mr-2 h-4 w-4" /> {isProxyMode ? 'جودة كاملة' : 'وضع البروكسي (أسرع)'}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -2017,6 +2093,8 @@ export default function VideoTools() {
                             currentTime={currentTime}
                             onUpdate={handlePropertyUpdate}
                         />
+                    ) : toolMode !== 'select' ? (
+                        <ToolInspector mode={toolMode} />
                     ) : (
                         <div className="flex-1 flex items-center justify-center text-gray-500 text-xs flex-col gap-2">
                             <Sliders size={24} className="opacity-20" />
@@ -2025,6 +2103,85 @@ export default function VideoTools() {
                     )}
                 </TabsContent>
             </Tabs>
+        </div>
+    );
+
+    const ToolInspector = ({ mode }: { mode: string }) => {
+        const tools: any = {
+            'rate-stretch': {
+                name: 'أداة مط المعدل (Rate Stretch)',
+                icon: <Timer className="text-yellow-500" size={32} />,
+                color: 'from-yellow-500/20 to-transparent',
+                desc: 'تُستخدم لتغيير سرعة المقطع عن طريق سحب أطرافه في التايم لاين. سحب الطرف لليمين يُبطئ المقطع، ولليسار يُسرعه.',
+                tips: ['استخدمها لضبط مدة الفيديوهات لتناسب الموسيقى.', 'تظهر السرعة الجديدة مئوية فوق المقطع.']
+            },
+            'split': {
+                name: 'أداة القص (Razor Tool)',
+                icon: <Scissors className="text-red-500" size={32} />,
+                color: 'from-red-500/20 to-transparent',
+                desc: 'تُنشئ نقطة قطع في المقطع عند مكان الضغط. مفيدة لتقسيم المشاهد وحذف الأجزاء غير المرغوبة.',
+                tips: ['اضغط على المقطع لتقسيمه فوراً.', 'استخدم Ctrl+K لتقسيم جميع المسارات.']
+            },
+            'ripple': {
+                name: 'تحرير التموج (Ripple Edit)',
+                icon: <MoveHorizontal className="text-green-500" size={32} />,
+                color: 'from-green-500/20 to-transparent',
+                desc: 'عند تقليص مقطع، تتحرك جميع المقاطع التالية لتغلق الفجوة تلقائياً.',
+                tips: ['توفر الوقت بدلاً من تحريك كل مقطع يدوياً.']
+            },
+            'pen': {
+                name: 'أداة القلم (Pen Tool)',
+                icon: <PenTool className="text-purple-500" size={32} />,
+                color: 'from-purple-500/20 to-transparent',
+                desc: 'ارسم أشكالاً حرة أو أقنعة (Masks) مباشرة على لوحة العرض.',
+                tips: ['اضغط لرسم النقاط، واغلق المسار بضغط نقطة البداية.']
+            }
+        };
+
+        const info = tools[mode] || { name: 'أداة نشطة', desc: 'تحكم في المكونات عبر التايم لاين.', tips: [] };
+
+        return (
+            <div className="flex-1 flex flex-col p-5 bg-[#1a1d21]">
+                <div className={`p-4 rounded-2xl bg-gradient-to-br ${info.color || 'from-blue-500/20 to-transparent'} border border-white/5 mb-6`}>
+                    <div className="mb-4">{info.icon || <Wand2 />}</div>
+                    <h3 className="font-bold text-lg text-white mb-2">{info.name}</h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">{info.desc}</p>
+                </div>
+
+                <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">نصائح احترافية</h4>
+                    {info.tips.map((tip: string, i: number) => (
+                        <div key={i} className="flex gap-3 text-[11px] text-gray-300 bg-white/5 p-3 rounded-xl border border-white/5 animate-in slide-in-from-right-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1 shrink-0" />
+                            {tip}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-auto p-4 rounded-xl bg-blue-600/10 border border-blue-500/20 text-[10px] text-blue-400 text-center">
+                    اكتشف قوة التحرير مع {info.name}
+                </div>
+            </div>
+        );
+    };
+
+    const VerticalToolbar = () => (
+        <div className="w-12 bg-[#0f1012] border-r border-gray-800 flex flex-col items-center py-2 gap-1 shrink-0 z-40">
+            <Button variant={toolMode === 'select' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('select')} title="Selection Tool (V)"><MousePointer2 className="w-full h-full" /></Button>
+            <Button variant={toolMode === 'move-element' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('move-element')} title="Move Tool (Canvas)"><Move className="w-full h-full" /></Button>
+            <Button variant={toolMode === 'track-select' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('track-select')} title="Track Select (A)"><ArrowRightFromLine className="w-full h-full" /></Button>
+
+            <div className="w-8 h-[1px] bg-gray-800 my-1" />
+
+            <Button variant={toolMode === 'split' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('split')} title="Razor Tool (C)"><Scissors className="w-full h-full" /></Button>
+            <Button variant={toolMode === 'ripple' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('ripple')} title="Ripple Edit (B)"><MoveHorizontal className="w-full h-full" /></Button>
+            <Button variant={toolMode === 'rolling' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('rolling')} title="Rolling Edit (N)"><Scaling className="w-full h-full" /></Button>
+            <Button variant={toolMode === 'rate-stretch' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('rate-stretch')} title="Rate Stretch (R)"><Timer className="w-full h-full" /></Button>
+
+            <div className="w-8 h-[1px] bg-gray-800 my-1" />
+
+            <Button variant={toolMode === 'slip' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('slip')} title="Slip Tool (Y)"><ArrowLeftRight className="w-full h-full" /></Button>
+            <Button variant={toolMode === 'slide' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 p-2" onClick={() => setToolMode('slide')} title="Slide Tool (U)"><Maximize className="w-full h-full" /></Button>
         </div>
     );
 
@@ -2061,14 +2218,15 @@ export default function VideoTools() {
         </div>
     );
 
-
-
     return (
-        <div className={`flex flex-col h-screen bg-[#0f1012] text-white overflow-hidden font-sans ${isFullscreen ? 'fixed inset-0 z-50' : 'relative'}`}>
+        <div className={`flex flex-col flex-1 h-full min-h-0 bg-[#0f1012] text-white overflow-hidden font-sans ${isFullscreen ? 'fixed inset-0 z-50' : 'relative'}`} dir="ltr">
             <TopBar />
 
             {/* Main Workspace */}
             <div className="flex-1 flex min-h-0">
+                {/* Left Primary Toolbar */}
+                <VerticalToolbar />
+
                 {/* Left Sidebar */}
                 <Sidebar />
                 <div
@@ -2086,11 +2244,11 @@ export default function VideoTools() {
                     multiple
                     onChange={handleFileUpload}
                 />
-                <div className="flex-1 flex flex-col min-w-0 bg-[#000]">
-                    <div className="flex-1 relative flex items-center justify-center p-2 bg-[#000] overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 bg-[#0f1012]">
+                    <div className="flex-1 relative bg-[#0f1012] overflow-hidden">
                         <canvas
                             ref={canvasRef}
-                            className={`max-w-full max-h-full aspect-video shadow-2xl ring-1 ring-gray-800/50 ${toolMode === 'pen' ? 'cursor-crosshair' : ''}`}
+                            className={`w-full h-full ${toolMode === 'pen' ? 'cursor-crosshair' : ''}`}
                             onMouseDown={handleCanvasMouseDown}
                             onDoubleClick={() => finishDrawing(true)}
                             onContextMenu={handleCanvasContextMenu}
@@ -2149,8 +2307,6 @@ export default function VideoTools() {
                         {/* Play Controls Removed from Overlay */}
                     </div>
 
-
-
                     {/* Timeline Toolbar (Horizontal) */}
                     <div className="h-10 bg-[#1a1d21] border-t border-gray-800 flex items-center justify-between px-4 shrink-0">
                         <div className="flex items-center gap-1">
@@ -2189,239 +2345,223 @@ export default function VideoTools() {
                 <div className="w-8 h-0.5 bg-gray-600 group-hover:bg-white rounded-full" />
             </div>
 
-            {/* Bottom - Timeline */}
+            {/* Bottom - Workspace Area */}
             <div style={{ height: layout.timelineHeight }} className="bg-[#131518] flex flex-col relative text-xs shrink-0">
-                {/* Time Ruler */}
-                <div className="h-6 bg-[#1a1d21] border-b border-gray-800 flex relative overflow-hidden shrink-0 cursor-ew-resize select-none" ref={timelineRef} onMouseDown={handleTimelineMouseDown}>
-                    <div className="flex-1 relative overflow-hidden">
-                        <div className="absolute inset-0" style={{ transform: `translateX(${-currentTime * zoom + 300}px)` }}>
-                            {(() => {
-                                // Dynamic Grid Calculation
-                                let step = 30; // default large step
-                                let subStep = 0; // no sub-ticks
+                <Tabs value={bottomTab} onValueChange={(v: any) => setBottomTab(v)} className="flex-1 flex flex-col min-h-0">
+                    <div className="absolute top-[2px] left-2 z-50 flex items-center gap-1">
+                        <TabsList className="bg-black/50 border border-white/5 h-7 p-0.5">
+                            <TabsTrigger value="timeline" className="text-[10px] h-6 px-3 data-[state=active]:bg-blue-600">الجدول الزمني</TabsTrigger>
+                            <TabsTrigger value="graph" className="text-[10px] h-6 px-3 data-[state=active]:bg-purple-600">محرر المنحنيات</TabsTrigger>
+                        </TabsList>
+                    </div>
 
-                                if (zoom >= 100) { step = 1; subStep = 0.1; }       // 1s + 1/10s ticks (High Zoom)
-                                else if (zoom >= 50) { step = 1; subStep = 0.5; }   // 1s + 1/2s ticks
-                                else if (zoom >= 20) { step = 5; subStep = 1; }     // 5s + 1s ticks
-                                else if (zoom >= 10) { step = 10; subStep = 5; }    // 10s + 5s ticks
-                                else { step = 30; subStep = 10; }                   // 30s + 10s ticks
+                    <TabsContent value="timeline" className="flex-1 flex flex-col min-h-0 m-0 data-[state=active]:flex">
+                        {/* Time Ruler */}
+                        <div className="h-6 bg-[#1a1d21] border-b border-gray-800 flex relative overflow-hidden shrink-0 cursor-ew-resize select-none" ref={timelineRef} onMouseDown={handleTimelineMouseDown}>
+                            <div className="flex-1 relative overflow-hidden">
+                                <div className="absolute inset-0" style={{ transform: `translateX(${-currentTime * zoom + 300}px)` }}>
+                                    {(() => {
+                                        // Dynamic Grid Calculation
+                                        let step = 30; // default large step
+                                        let subStep = 0; // no sub-ticks
 
-                                const ticks = [];
-                                const maxTime = Math.max(totalDuration + 30, currentTime + 60);
+                                        if (zoom >= 100) { step = 1; subStep = 0.1; }       // 1s + 1/10s ticks (High Zoom)
+                                        else if (zoom >= 50) { step = 1; subStep = 0.5; }   // 1s + 1/2s ticks
+                                        else if (zoom >= 20) { step = 5; subStep = 1; }     // 5s + 1s ticks
+                                        else if (zoom >= 10) { step = 10; subStep = 5; }    // 10s + 5s ticks
+                                        else { step = 30; subStep = 10; }                   // 30s + 10s ticks
 
-                                for (let t = 0; t <= maxTime; t += step) {
-                                    // Main Tick
-                                    ticks.push(
-                                        <div key={t} className="absolute border-l border-gray-500 h-2.5 top-0 z-10" style={{ left: t * zoom }}>
-                                            <span className="text-[9px] text-gray-400 ml-1.5 font-mono absolute top-0.5 whitespace-nowrap">
-                                                {formatTime(t)}
-                                            </span>
-                                        </div>
-                                    );
-                                    // Sub Ticks
-                                    if (subStep > 0) {
-                                        for (let st = t + subStep; st < t + step && st <= maxTime; st += subStep) {
+                                        const ticks = [];
+                                        const maxTime = Math.max(totalDuration + 30, currentTime + 60);
+
+                                        for (let t = 0; t <= maxTime; t += step) {
+                                            // Main Tick
                                             ticks.push(
-                                                <div key={st} className="absolute border-l border-gray-800 h-1.5 top-1" style={{ left: st * zoom }} />
+                                                <div key={t} className="absolute border-l border-gray-500 h-2.5 top-0 z-10" style={{ left: t * zoom }}>
+                                                    <span className="text-[9px] text-gray-400 ml-1.5 font-mono absolute top-0.5 whitespace-nowrap">
+                                                        {formatTime(t)}
+                                                    </span>
+                                                </div>
                                             );
+                                            // Sub Ticks
+                                            if (subStep > 0) {
+                                                for (let st = t + subStep; st < t + step && st <= maxTime; st += subStep) {
+                                                    ticks.push(
+                                                        <div key={st} className="absolute border-l border-gray-800 h-1.5 top-1" style={{ left: st * zoom }} />
+                                                    );
+                                                }
+                                            }
                                         }
-                                    }
-                                }
-                                return ticks;
-                            })()}
-                        </div>
-                    </div>
-                    {/* Header Placeholder in Ruler */}
-                    <div className="w-24 shrink-0 bg-[#1a1d21] border-l border-gray-800 z-10 sticky right-0 text-[10px] p-1 text-gray-500 font-mono text-center">00:00:00</div>
-                </div>
-
-                {/* Tracks Area */}
-                <div className="flex-1 flex overflow-hidden" onWheel={handleTimelineWheel}>
-                    {/* Vertical Tools (Far Left) */}
-                    <div className="w-12 bg-[#1a1d21] border-r border-gray-800 flex flex-col items-center py-2 gap-1 z-20 shrink-0 overflow-y-auto custom-scrollbar" onWheel={e => e.stopPropagation()}>
-                        {/* Selection Group */}
-                        <Button variant={toolMode === 'select' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('select')} title="Selection Tool (V)"><MousePointer2 className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'move-element' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('move-element')} title="Move Tool (Canvas)"><Move className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'track-select' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('track-select')} title="Track Select Forward (A)"><ArrowRightFromLine className="w-full h-full" /></Button>
-
-                        <div className="w-6 h-px bg-gray-700 my-1 opacity-50" />
-
-                        {/* Edit Group */}
-                        <Button variant={toolMode === 'ripple' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('ripple')} title="Ripple Edit Tool (B)"><MoveHorizontal className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'rolling' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('rolling')} title="Rolling Edit Tool (N)"><Scaling className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'rate-stretch' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('rate-stretch')} title="Rate Stretch Tool (R)"><Timer className="w-full h-full" /></Button>
-
-                        <div className="w-6 h-px bg-gray-700 my-1 opacity-50" />
-
-                        {/* Cut/Slide Group */}
-                        <Button variant={toolMode === 'split' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('split')} title="Razor Tool (C)"><Scissors className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'slip' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('slip')} title="Slip Tool (Y)"><ArrowLeftRight className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'slide' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('slide')} title="Slide Tool (U)"><Maximize className="w-full h-full" /></Button>
-
-                        <div className="w-6 h-px bg-gray-700 my-1 opacity-50" />
-
-                        {/* Creation Group */}
-                        <Button variant={toolMode === 'pen' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('pen')} title="Pen Tool (P)"><PenTool className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'hand' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('hand')} title="Hand Tool (H)"><Hand className="w-full h-full" /></Button>
-                        <Button variant={toolMode === 'zoom' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 p-1.5" onClick={() => setToolMode('zoom')} title="Zoom Tool (Z)"><ZoomIn className="w-full h-full" /></Button>
-
-                        <div className="w-6 h-px bg-gray-700 my-1 opacity-50" />
-
-                        <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5" onClick={() => addTextClip()} title="Type Tool (T)"><TypeIcon className="w-full h-full" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 p-1.5 text-purple-400 hover:text-purple-300" onClick={() => setIsAIChannelOpen(true)} title="AI Assistant"><Wand2 className="w-full h-full" /></Button>
-                    </div>
-
-                    {/* Tracks Content (Left) */}
-                    <div ref={tracksContainerRef} className="flex-1 bg-[#0f1012] relative overflow-hidden overflow-y-auto">
-                        {/* Playhead Line */}
-                        <div className="absolute top-0 bottom-0 left-[300px] w-px bg-white z-30 pointer-events-none h-full">
-                            <div className="absolute -top-3 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white" />
+                                        return ticks;
+                                    })()}
+                                </div>
+                            </div>
+                            {/* Header Placeholder in Ruler */}
+                            <div className="w-24 shrink-0 bg-[#1a1d21] border-l border-gray-800 z-10 sticky right-0 text-[10px] p-1 text-gray-500 font-mono text-center">00:00:00</div>
                         </div>
 
-                        <div className="absolute inset-0" style={{ transform: `translateX(${-currentTime * zoom + 300}px)` }}>
-                            {/* Video Tracks Section */}
-                            {tracks.filter(t => t.type !== 'audio').reverse().map((track, trackIndex) => (
-                                <div key={track.id} className="h-16 border-b border-gray-800/30 relative" style={{ top: 0 }}>
-                                    {clips.filter(c => c.trackId === track.id).map(clip => (
-                                        <div key={clip.id}
-                                            onMouseDown={(e) => handleClipMouseDown(e, clip)}
-                                            onMouseEnter={(e) => {
-                                                // Optional: Add hover cursors for edges
-                                            }}
-                                            className={`absolute top-1 bottom-1 rounded-md overflow-hidden border group select-none transition-opacity
+                        {/* Tracks Area */}
+                        <div className="flex-1 flex overflow-hidden" onWheel={handleTimelineWheel}>
+
+
+                            {/* Tracks Content (Left) */}
+                            <div ref={tracksContainerRef} className="flex-1 bg-[#0f1012] relative overflow-hidden overflow-y-auto">
+                                {/* Playhead Line */}
+                                <div className="absolute top-0 bottom-0 left-[300px] w-px bg-white z-30 pointer-events-none h-full">
+                                    <div className="absolute -top-3 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white" />
+                                </div>
+
+                                <div className="absolute inset-0" style={{ transform: `translateX(${-currentTime * zoom + 300}px)` }}>
+                                    {/* Video Tracks Section */}
+                                    {tracks.filter(t => t.type !== 'audio').reverse().map((track, trackIndex) => (
+                                        <div key={track.id} className="h-16 border-b border-gray-800/30 relative" style={{ top: 0 }}>
+                                            {clips.filter(c => c.trackId === track.id).map(clip => (
+                                                <div key={clip.id}
+                                                    onMouseDown={(e) => handleClipMouseDown(e, clip)}
+                                                    onMouseEnter={(e) => {
+                                                        // Optional: Add hover cursors for edges
+                                                    }}
+                                                    className={`absolute top-1 bottom-1 rounded-md overflow-hidden border group select-none transition-opacity
                                                   ${toolMode === 'slide' ? 'cursor-ew-resize' : toolMode === 'hand' ? 'cursor-grab' : toolMode === 'split' ? 'cursor-crosshair' : 'cursor-pointer'}
                                                   ${selectedClipIds.includes(clip.id) ? 'ring-2 ring-white border-white z-10' : 'border-transparent opacity-90 hover:opacity-100'}
                                                `}
-                                            style={{
-                                                left: clip.startAt * zoom,
-                                                width: getClipDuration(clip) * zoom,
-                                                backgroundColor: track.color + '40',
-                                                zIndex: dragging?.id === clip.id ? 50 : undefined
-                                            }}>
-                                            <div className="h-full w-full relative">
-                                                <div className="absolute top-0 inset-x-0 h-1 bg-white/20" />
-                                                <div className="p-1.5 truncate text-[10px] font-medium text-white/90 drop-shadow-md relative z-10 flex items-center gap-1">
-                                                    {clip.type === 'text' && <TypeIcon size={10} />}
-                                                    {clip.name}
-                                                    {/* Show Slide Delta if dragging */}
-                                                    {dragging?.id === clip.id && toolMode === 'slide' && (
-                                                        <span className="ml-2 bg-black/80 px-1 rounded text-[9px] font-mono text-yellow-500 border border-yellow-500/30">
-                                                            {(clip.startAt - dragging.originalStart) > 0 ? '+' : ''}{(clip.startAt - dragging.originalStart).toFixed(2)}s
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                    style={{
+                                                        left: clip.startAt * zoom,
+                                                        width: getClipDuration(clip) * zoom,
+                                                        backgroundColor: track.color + '40',
+                                                        zIndex: dragging?.id === clip.id ? 50 : undefined
+                                                    }}>
+                                                    <div className="h-full w-full relative">
+                                                        <div className="absolute top-0 inset-x-0 h-1 bg-white/20" />
+                                                        <div className="p-1.5 truncate text-[10px] font-medium text-white/90 drop-shadow-md relative z-10 flex items-center gap-1">
+                                                            {clip.type === 'text' && <TypeIcon size={10} />}
+                                                            {clip.name}
+                                                            {/* Show Slide Delta if dragging */}
+                                                            {dragging?.id === clip.id && toolMode === 'slide' && (
+                                                                <span className="ml-2 bg-black/80 px-1 rounded text-[9px] font-mono text-yellow-500 border border-yellow-500/30">
+                                                                    {(clip.startAt - dragging.originalStart) > 0 ? '+' : ''}{(clip.startAt - dragging.originalStart).toFixed(2)}s
+                                                                </span>
+                                                            )}
+                                                        </div>
 
-                                                {/* Keyframe Markers */}
-                                                {clip.keyframes && clip.keyframes.map((kf, idx) => (
-                                                    <div key={idx}
-                                                        className="absolute bottom-1 w-1.5 h-1.5 bg-purple-500 rounded-full border border-white z-20 pointer-events-none -translate-x-1/2"
-                                                        style={{ left: (kf.time) * zoom }}
-                                                        title={`Keyframe at ${kf.time.toFixed(2)}s`}
-                                                    />
-                                                ))}
-                                            </div>
+                                                        {/* Keyframe Markers */}
+                                                        {clip.keyframes && clip.keyframes.map((kf, idx) => (
+                                                            <div key={idx}
+                                                                className="absolute bottom-1 w-1.5 h-1.5 bg-purple-500 rounded-full border border-white z-20 pointer-events-none -translate-x-1/2"
+                                                                style={{ left: (kf.time) * zoom }}
+                                                                title={`Keyframe at ${kf.time.toFixed(2)}s`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     ))}
-                                </div>
-                            ))}
 
-                            {/* Divider Separator */}
-                            <div className="h-4 bg-[#0f1012] border-t border-b border-gray-800 flex items-center justify-center">
-                                <div className="h-[1px] w-full bg-gray-800"></div>
-                            </div>
+                                    {/* Divider Separator */}
+                                    <div className="h-4 bg-[#0f1012] border-t border-b border-gray-800 flex items-center justify-center">
+                                        <div className="h-[1px] w-full bg-gray-800"></div>
+                                    </div>
 
-                            {/* Audio Tracks Section */}
-                            {tracks.filter(t => t.type === 'audio').map((track, trackIndex) => (
-                                <div key={track.id} className="h-16 border-b border-gray-800/30 relative" style={{ top: 0 }}>
-                                    {clips.filter(c => c.trackId === track.id).map(clip => (
-                                        <div key={clip.id}
-                                            onMouseDown={(e) => handleClipMouseDown(e, clip)}
-                                            onMouseEnter={(e) => {
-                                                // Optional: Add hover cursors for edges
-                                            }}
-                                            className={`absolute top-1 bottom-1 rounded-md overflow-hidden border group select-none transition-opacity
+                                    {/* Audio Tracks Section */}
+                                    {tracks.filter(t => t.type === 'audio').map((track, trackIndex) => (
+                                        <div key={track.id} className="h-16 border-b border-gray-800/30 relative" style={{ top: 0 }}>
+                                            {clips.filter(c => c.trackId === track.id).map(clip => (
+                                                <div key={clip.id}
+                                                    onMouseDown={(e) => handleClipMouseDown(e, clip)}
+                                                    onMouseEnter={(e) => {
+                                                        // Optional: Add hover cursors for edges
+                                                    }}
+                                                    className={`absolute top-1 bottom-1 rounded-md overflow-hidden border group select-none transition-opacity
                                                   ${toolMode === 'slide' ? 'cursor-ew-resize' : toolMode === 'hand' ? 'cursor-grab' : toolMode === 'split' ? 'cursor-crosshair' : 'cursor-pointer'}
                                                   ${selectedClipIds.includes(clip.id) ? 'ring-2 ring-white border-white z-10' : 'border-transparent opacity-90 hover:opacity-100'}
                                                `}
-                                            style={{
-                                                left: clip.startAt * zoom,
-                                                width: getClipDuration(clip) * zoom,
-                                                backgroundColor: track.color + '40',
-                                                zIndex: dragging?.id === clip.id ? 50 : undefined
-                                            }}>
-                                            <div className="h-full w-full relative">
-                                                <div className="absolute top-0 inset-x-0 h-1 bg-white/20" />
-                                                <div className="p-1.5 truncate text-[10px] font-medium text-white/90 drop-shadow-md relative z-10 flex items-center gap-1">
-                                                    {clip.type === 'text' && <TypeIcon size={10} />}
-                                                    {clip.name}
-                                                    {/* Show Slide Delta if dragging */}
-                                                    {dragging?.id === clip.id && toolMode === 'slide' && (
-                                                        <span className="ml-2 bg-black/80 px-1 rounded text-[9px] font-mono text-yellow-500 border border-yellow-500/30">
-                                                            {(clip.startAt - dragging.originalStart) > 0 ? '+' : ''}{(clip.startAt - dragging.originalStart).toFixed(2)}s
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                    style={{
+                                                        left: clip.startAt * zoom,
+                                                        width: getClipDuration(clip) * zoom,
+                                                        backgroundColor: track.color + '40',
+                                                        zIndex: dragging?.id === clip.id ? 50 : undefined
+                                                    }}>
+                                                    <div className="h-full w-full relative">
+                                                        <div className="absolute top-0 inset-x-0 h-1 bg-white/20" />
+                                                        <div className="p-1.5 truncate text-[10px] font-medium text-white/90 drop-shadow-md relative z-10 flex items-center gap-1">
+                                                            {clip.type === 'text' && <TypeIcon size={10} />}
+                                                            {clip.name}
+                                                            {/* Show Slide Delta if dragging */}
+                                                            {dragging?.id === clip.id && toolMode === 'slide' && (
+                                                                <span className="ml-2 bg-black/80 px-1 rounded text-[9px] font-mono text-yellow-500 border border-yellow-500/30">
+                                                                    {(clip.startAt - dragging.originalStart) > 0 ? '+' : ''}{(clip.startAt - dragging.originalStart).toFixed(2)}s
+                                                                </span>
+                                                            )}
+                                                        </div>
 
-                                                {/* Keyframe Markers */}
-                                                {clip.keyframes && clip.keyframes.map((kf, idx) => (
-                                                    <div key={idx}
-                                                        className="absolute bottom-1 w-1.5 h-1.5 bg-purple-500 rounded-full border border-white z-20 pointer-events-none -translate-x-1/2"
-                                                        style={{ left: (kf.time) * zoom }}
-                                                        title={`Keyframe at ${kf.time.toFixed(2)}s`}
-                                                    />
-                                                ))}
-                                            </div>
+                                                        {/* Keyframe Markers */}
+                                                        {clip.keyframes && clip.keyframes.map((kf, idx) => (
+                                                            <div key={idx}
+                                                                className="absolute bottom-1 w-1.5 h-1.5 bg-purple-500 rounded-full border border-white z-20 pointer-events-none -translate-x-1/2"
+                                                                style={{ left: (kf.time) * zoom }}
+                                                                title={`Keyframe at ${kf.time.toFixed(2)}s`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     ))}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Track Headers (Right) */}
-                    <div className="w-24 bg-[#1a1d21] border-l border-gray-800 shrink-0 z-20 shadow-xl overflow-y-auto custom-scrollbar flex flex-col" onWheel={e => e.stopPropagation()}>
-                        {/* Video Controls */}
-                        <div className="flex flex-col gap-1 p-1 border-b border-gray-800">
-                            <Button variant="ghost" size="sm" className="h-6 text-[10px] w-full justify-start px-1 text-gray-400 hover:text-blue-400" onClick={() => addTrack('video')}>
-                                <Plus size={10} className="mr-1" /> فيديو
-                            </Button>
-                        </div>
-                        {tracks.filter(t => t.type !== 'audio').reverse().map(t => (
-                            <div key={t.id} className="h-16 border-b border-gray-800 flex flex-col justify-center px-2 relative group text-right flex-shrink-0">
-                                <div className="absolute right-0 top-0 bottom-0 w-1" style={{ backgroundColor: t.color }} />
-                                <span className="text-[11px] font-bold text-gray-400 mb-1 truncate pr-2">{t.label}</span>
-                                <div className="flex gap-1 opacity-50 group-hover:opacity-100 transition justify-end pr-2">
-                                    <MonitorPlay size={12} className="cursor-pointer hover:text-white" />
+                            </div>
+                            {/* Track Headers (Right Side) */}
+                            <div className="w-24 bg-[#1a1d21] border-l border-gray-800 flex flex-col pt-0 shrink-0 overflow-y-auto" onWheel={e => e.stopPropagation()}>
+                                {tracks.filter(t => t.type !== 'audio').reverse().map(track => (
+                                    <div key={track.id} className="h-16 border-b border-gray-800 flex flex-col items-center justify-center gap-1 group relative">
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter truncate w-full px-1 text-center">{track.label}</span>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-400 hover:text-white"><Eye size={10} /></Button>
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-400 hover:text-white"><Lock size={10} /></Button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="h-4 bg-[#0f1012] border-t border-b border-gray-800" />
+                                {tracks.filter(t => t.type === 'audio').map(track => (
+                                    <div key={track.id} className="h-16 border-b border-gray-800 flex flex-col items-center justify-center gap-1 group relative">
+                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter truncate w-full px-1 text-center">{track.label}</span>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-400 hover:text-white"><Volume2 size={10} /></Button>
+                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-gray-500 hover:text-red-500"><Trash2 size={10} /></Button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="flex-1 bg-[#1a1d21] flex flex-col items-center py-4 gap-2">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-blue-500" onClick={() => addTrack('video')}><PlusCircle size={14} /></Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:text-green-500" onClick={() => addTrack('audio')}><Mic size={14} /></Button>
                                 </div>
                             </div>
-                        ))}
-
-                        {/* Separator */}
-                        <div className="h-4 bg-[#0f1012] border-t border-b border-gray-800 flex items-center justify-center shrink-0">
-                            <span className="text-[9px] text-gray-600">AUDIO</span>
                         </div>
+                    </TabsContent>
 
-                        {/* Audio Controls */}
-                        <div className="flex flex-col gap-1 p-1 border-b border-gray-800">
-                            <Button variant="ghost" size="sm" className="h-6 text-[10px] w-full justify-start px-1 text-gray-400 hover:text-yellow-400" onClick={() => addTrack('audio')}>
-                                <Plus size={10} className="mr-1" /> صوت
-                            </Button>
-                        </div>
-                        {tracks.filter(t => t.type === 'audio').map(t => (
-                            <div key={t.id} className="h-16 border-b border-gray-800 flex flex-col justify-center px-2 relative group text-right flex-shrink-0">
-                                <div className="absolute right-0 top-0 bottom-0 w-1" style={{ backgroundColor: t.color }} />
-                                <span className="text-[11px] font-bold text-gray-400 mb-1 truncate pr-2">{t.label}</span>
-                                <div className="flex gap-1 opacity-50 group-hover:opacity-100 transition justify-end pr-2">
-                                    <Speaker size={12} className="cursor-pointer hover:text-white" />
+                    <TabsContent value="graph" className="flex-1 flex flex-col min-h-0 m-0 data-[state=active]:flex">
+                        {selectedClipIds.length > 0 ? (
+                            <GraphEditor
+                                clip={clips.find(c => c.id === selectedClipIds[0])!}
+                                currentTime={currentTime}
+                                onUpdate={handlePropertyUpdate}
+                                onClose={() => {
+                                    setIsGraphEditorOpen(false);
+                                    setBottomTab('timeline');
+                                }}
+                            />
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center flex-col gap-4 text-gray-500 bg-[#0f1012]">
+                                <div className="w-16 h-16 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center">
+                                    <MousePointer2 className="opacity-20" size={32} />
                                 </div>
+                                <p className="text-xs uppercase tracking-widest font-bold">يرجى تحديد مقطع لتعديل المنحنيات</p>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        )}
+                    </TabsContent>
+                </Tabs>
 
-                {/* Horizontal Meter */}
-                {/* Horizontal Meter */}
-                <div className="h-1 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 w-full opacity-30" />
+
             </div>
 
             {/* Selection Box Overlay */}
@@ -2437,16 +2577,6 @@ export default function VideoTools() {
                 />
             )}
 
-            {/* Footer Navigation */}
-            <div className="h-10 bg-[#000] border-t border-gray-800 flex items-center justify-center gap-1">
-                {['Cut', 'Edit', 'Color', 'Sound'].map(m => (
-                    <Button key={m} variant="ghost"
-                        className={`h-full min-w-[80px] rounded-none border-t-2 text-xs ${mode === m.toLowerCase() ? 'border-white bg-[#1a1d21] text-white' : 'border-transparent text-gray-500'}`}
-                        onClick={() => setMode(m.toLowerCase() as any)}>
-                        {m}
-                    </Button>
-                ))}
-            </div>
 
             {/* Hidden Input for File Upload */}
             {/* Hidden Input for File Upload */}
@@ -2503,6 +2633,6 @@ export default function VideoTools() {
                 onClose={() => setIsAIChannelOpen(false)}
                 onAction={handleAIAction}
             />
-        </div >
+        </div>
     );
 }

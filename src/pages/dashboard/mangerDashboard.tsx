@@ -522,7 +522,7 @@ export default function InstructorDashboard() {
             </div >
 
             <div className="flex items-center gap-3">
-              <ChatButton variant="support" className="hidden sm:flex" />
+
 
               <Button
                 onClick={() => setShowAddProductModal(true)}
@@ -617,7 +617,7 @@ export default function InstructorDashboard() {
           </aside>
 
           {/* Main Content with offset for sidebars */}
-          <main className="flex-1 overflow-y-auto bg-gray-50 p-4 ms-52">
+          <main className={`flex-1 flex flex-col bg-gray-50 ms-52 ${activeTab === 'video-tools' || activeTab === 'photo-studio' ? 'p-0 overflow-hidden' : 'p-4 overflow-y-auto'}`}>
             {activeTab === "overview" && (
               <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-6">
@@ -914,7 +914,7 @@ export default function InstructorDashboard() {
             </div>
 
             {/* Persist Video Tools State */}
-            <div style={{ display: activeTab === "video-tools" ? 'block' : 'none' }}>
+            <div className="h-full" style={{ display: activeTab === "video-tools" ? 'block' : 'none' }}>
               {(visitedTabs.has("video-tools") || activeTab === "video-tools") && <VideoTools />}
             </div>
 

@@ -77,9 +77,7 @@ const NotificationBell = ({ onViewAll }: NotificationBellProps) => {
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition-colors">
                     <Bell size={22} />
-                    {unreadCount > 0 && (
-                        <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full ring-2 ring-white animate-pulse" />
-                    )}
+
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="end" sideOffset={8}>
