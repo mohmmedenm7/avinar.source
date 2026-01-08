@@ -39,10 +39,13 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Draggable Position State
+    // Draggable & Resizable State
     const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [size, setSize] = useState({ w: 300, h: 400 }); // Smaller default size
     const [isDragging, setIsDragging] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, w: 0, h: 0 });
     const windowRef = useRef<HTMLDivElement>(null);
 
     // Persistence & Sessions Management
@@ -64,7 +67,10 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
     }, []);
 
     useEffect(() => {
-        if (messages.length > 0) {
+        // Only save if there is at least one USER message
+        const hasUserMessage = messages.some(m => m.role === 'user');
+
+        if (hasUserMessage) {
             setSessions(prev => {
                 const existingIdx = prev.findIndex(s => s.id === currentSessionId);
                 const firstUserMsg = messages.find(m => m.role === 'user')?.content;
@@ -97,11 +103,17 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
 
     useEffect(() => {
         if (isOpen) {
-            setPosition({ x: window.innerWidth - 380, y: 80 });
+            // Position safely within viewport
+            setPosition({
+                x: Math.max(20, window.innerWidth - 340),
+                y: 80
+            });
         }
     }, [isOpen]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest('.resize-handle')) return; // Don't drag if resizing
+
         if ((e.target as HTMLElement).closest('.drag-handle')) {
             setIsDragging(true);
             setDragOffset({
@@ -111,6 +123,17 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
         }
     };
 
+    const handleResizeMouseDown = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsResizing(true);
+        setResizeStart({
+            x: e.clientX,
+            y: e.clientY,
+            w: size.w,
+            h: size.h
+        });
+    };
+
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDragging) {
@@ -118,14 +141,22 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                     x: e.clientX - dragOffset.x,
                     y: e.clientY - dragOffset.y
                 });
+            } else if (isResizing) {
+                const deltaX = e.clientX - resizeStart.x;
+                const deltaY = e.clientY - resizeStart.y;
+                setSize({
+                    w: Math.max(280, resizeStart.w + deltaX), // Min width 280
+                    h: Math.max(300, resizeStart.h + deltaY)  // Min height 300
+                });
             }
         };
 
         const handleMouseUp = () => {
             setIsDragging(false);
+            setIsResizing(false);
         };
 
-        if (isDragging) {
+        if (isDragging || isResizing) {
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mouseup', handleMouseUp);
         }
@@ -134,7 +165,7 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, dragOffset]);
+    }, [isDragging, isResizing, dragOffset, resizeStart]);
 
     const processMessage = async (userMessage: string) => {
         if (!userMessage.trim()) return;
@@ -152,8 +183,6 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
 
         try {
             const token = localStorage.getItem("token");
-
-            // Prepare history (last 5 messages)
             const history = messages.slice(-5).map(m => ({
                 role: m.role,
                 content: m.content
@@ -213,49 +242,50 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
     return (
         <div
             ref={windowRef}
-            className="fixed z-[100] w-[350px] select-none pointer-events-auto"
+            className="fixed z-[100] select-none pointer-events-auto shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[32px] bg-white ring-1 ring-black/[0.03]"
             style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-                transition: isDragging ? 'none' : 'all 0.15s cubic-bezier(0.2, 0, 0, 1)'
+                width: `${size.w}px`,
+                transition: (isDragging || isResizing) ? 'none' : 'top 0.15s, left 0.15s'
             }}
         >
-            <Card className="shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none rounded-[32px] overflow-hidden bg-white ring-1 ring-black/[0.03]">
+            <Card className="border-none rounded-[32px] overflow-hidden bg-white h-full flex flex-col relative shadow-none">
                 {/* Header Section */}
                 <div
                     onMouseDown={handleMouseDown}
-                    className="drag-handle p-5 pb-3 flex flex-col gap-4 cursor-grab active:cursor-grabbing"
+                    className="drag-handle p-4 pb-2 flex flex-col gap-3 cursor-grab active:cursor-grabbing shrink-0"
                 >
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                                <Sparkles size={18} fill="currentColor" />
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                <Sparkles size={16} fill="currentColor" />
                             </div>
                             <div className="flex flex-col">
-                                <h3 className="font-bold text-gray-900 text-[14px] leading-tight text-right">Ask Super AI</h3>
+                                <h3 className="font-bold text-gray-900 text-[13px] leading-tight text-right">Super AI</h3>
                                 <div className="flex items-center gap-1.5 flex-row-reverse">
-                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[11px] text-gray-500 font-medium">نشط الآن</span>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[10px] text-gray-500 font-medium">نشط الآن</span>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-0.5">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className={`h-8 w-8 rounded-full transition-colors ${view === 'history' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`}
+                                className={`h-7 w-7 rounded-full transition-colors ${view === 'history' ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setView(view === 'chat' ? 'history' : 'chat');
                                 }}
                                 title="سجل المحادثات"
                             >
-                                <History size={15} />
+                                <History size={14} />
                             </Button>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100"
+                                className="h-7 w-7 rounded-full text-gray-400 hover:bg-gray-100"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     const newId = Date.now().toString();
@@ -270,31 +300,31 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                                 }}
                                 title="محادثة جديدة"
                             >
-                                <ArrowUp size={15} className="rotate-45" />
+                                <ArrowUp size={14} className="rotate-45" />
                             </Button>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-500"
+                                className="h-7 w-7 rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-500"
                                 onClick={(e) => { e.stopPropagation(); onClose(); }}
                             >
-                                <X size={15} />
+                                <X size={14} />
                             </Button>
                         </div>
                     </div>
                 </div>
 
-                <CardContent className="p-0 flex flex-col h-[480px]">
+                <CardContent className="p-0 flex flex-col min-h-0 flex-1" style={{ height: size.h - 80 }}>
                     {view === 'history' ? (
-                        <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2 scrollbar-none">
-                            <h4 className="text-[12px] font-bold text-gray-400 mb-4 text-right px-2 uppercase tracking-widest">تاريخ المحادثات</h4>
+                        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 scrollbar-none">
+                            <h4 className="text-[11px] font-bold text-gray-400 mb-3 text-right px-1 uppercase tracking-widest">تاريخ المحادثات</h4>
                             {sessions.length === 0 ? (
-                                <div className="text-center py-10 opacity-50">لا يوجد سجلات حتى الآن</div>
+                                <div className="text-center py-8 opacity-50 text-xs">لا يوجد سجلات حتى الآن</div>
                             ) : (
                                 sessions.map((s) => (
                                     <div
                                         key={s.id}
-                                        className={`group relative p-4 rounded-2xl border transition-all cursor-pointer text-right ${s.id === currentSessionId ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
+                                        className={`group relative p-3 rounded-xl border transition-all cursor-pointer text-right ${s.id === currentSessionId ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100 hover:border-blue-200'}`}
                                         onClick={() => {
                                             setCurrentSessionId(s.id);
                                             setMessages(s.messages.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
@@ -302,14 +332,14 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                                         }}
                                     >
                                         <div className="flex justify-between items-center flex-row-reverse mb-1">
-                                            <span className="text-[13px] font-bold text-gray-800 line-clamp-1">{s.title}</span>
-                                            <span className="text-[10px] text-gray-400">{new Date(s.timestamp).toLocaleDateString('ar-EG')}</span>
+                                            <span className="text-[12px] font-bold text-gray-800 line-clamp-1">{s.title}</span>
+                                            <span className="text-[9px] text-gray-400">{new Date(s.timestamp).toLocaleDateString('ar-EG')}</span>
                                         </div>
-                                        <p className="text-[11px] text-gray-500 line-clamp-1 opacity-70">
+                                        <p className="text-[10px] text-gray-500 line-clamp-1 opacity-70">
                                             {s.messages[s.messages.length - 1]?.content}
                                         </p>
                                         <button
-                                            className="absolute left-2 top-2 opacity-0 group-hover:opacity-100 p-1.5 hover:text-red-500 transition-all rounded-full hover:bg-red-50"
+                                            className="absolute left-2 top-2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 transition-all rounded-full hover:bg-red-50"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (confirm('هل تريد حذف هذه المحادثة؟')) {
@@ -328,7 +358,7 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                                                 }
                                             }}
                                         >
-                                            <X size={12} />
+                                            <X size={10} />
                                         </button>
                                     </div>
                                 ))
@@ -337,11 +367,11 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                     ) : (
                         <>
                             {/* Chat Area */}
-                            <div className="flex-1 overflow-y-auto px-5 space-y-6 scrollbar-none">
+                            <div className="flex-1 overflow-y-auto px-4 space-y-4 scrollbar-none pb-2">
                                 {messages.length === 1 && (
-                                    <div className="pt-2 flex flex-col items-center gap-4 text-center">
-                                        <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100/50">
-                                            <p className="text-[12px] text-blue-700 font-medium max-w-[200px]">
+                                    <div className="pt-2 flex flex-col items-center gap-3 text-center">
+                                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100/50">
+                                            <p className="text-[11px] text-blue-700 font-medium max-w-[180px]">
                                                 أنا هنا لمساعدتك في المونتاج والتحرير الذكي. جرب سؤالي عن أي شيء!
                                             </p>
                                         </div>
@@ -349,10 +379,10 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                                             {quickPrompts.map((p, i) => (
                                                 <button
                                                     key={i}
-                                                    className="p-3 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-2xl text-[11px] text-gray-600 transition-all text-right flex items-center gap-2 flex-row-reverse justify-start"
+                                                    className="p-2.5 bg-gray-50 hover:bg-blue-50 border border-gray-100 rounded-xl text-[10px] text-gray-600 transition-all text-right flex items-center gap-1.5 flex-row-reverse justify-start"
                                                     onClick={() => processMessage(p.label)}
                                                 >
-                                                    <span className="text-[14px]">{p.icon}</span>
+                                                    <span className="text-[12px]">{p.icon}</span>
                                                     {p.label}
                                                 </button>
                                             ))}
@@ -362,14 +392,14 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
 
                                 {messages.map((m) => (
                                     <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`flex gap-3 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        <div className={`flex gap-2 max-w-[92%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                             {m.role === 'assistant' && (
-                                                <Avatar className="h-7 w-7 mt-0.5 border border-blue-100 shadow-sm">
+                                                <Avatar className="h-6 w-6 mt-1 border border-blue-100 shadow-sm shrink-0">
                                                     <AvatarImage src="/ai-avatar.png" />
-                                                    <AvatarFallback className="bg-blue-100 text-blue-600 text-[10px] font-bold">AI</AvatarFallback>
+                                                    <AvatarFallback className="bg-blue-100 text-blue-600 text-[9px] font-bold">AI</AvatarFallback>
                                                 </Avatar>
                                             )}
-                                            <div className={`px-4 py-3 rounded-[22px] text-[12px] leading-[1.6] shadow-sm tracking-wide ${m.role === 'user'
+                                            <div className={`px-3 py-2.5 rounded-[18px] text-[11px] leading-[1.5] shadow-sm tracking-wide ${m.role === 'user'
                                                 ? 'bg-blue-600 text-white rounded-tr-none'
                                                 : 'bg-gray-100 text-gray-800 rounded-tl-none font-medium'
                                                 }`}>
@@ -382,7 +412,7 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                             </div>
 
                             {/* Input Area */}
-                            <div className="p-4 pt-2">
+                            <div className="p-3 pt-0 shrink-0">
                                 <div className="relative flex items-center gap-2 items-end">
                                     <div className="relative flex-1 group">
                                         <Input
@@ -390,29 +420,32 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
                                             onChange={(e) => setInput(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && processMessage(input)}
                                             placeholder="كيف يمكنني مساعدتك؟"
-                                            className="pr-4 pl-12 py-6 bg-gray-50/50 border-gray-100 rounded-[24px] text-[13px] focus-visible:ring-blue-400 focus-visible:bg-white transition-all shadow-inner text-right"
+                                            className="pr-4 py-5 bg-gray-50/50 border-gray-100 rounded-[20px] text-[12px] focus-visible:ring-blue-400 focus-visible:bg-white transition-all shadow-inner text-right h-10"
                                             disabled={loading}
                                         />
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600 rounded-full">
-                                                <Mic size={18} />
-                                            </Button>
-                                        </div>
                                     </div>
                                     <Button
                                         size="icon"
-                                        className={`h-12 w-12 rounded-full shadow-lg transition-all active:scale-90 ${input.trim() ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30' : 'bg-gray-100 text-gray-400 pointer-events-none'
+                                        className={`h-10 w-10 rounded-full shadow-lg transition-all active:scale-90 shrink-0 ${input.trim() ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30' : 'bg-gray-100 text-gray-400 pointer-events-none'
                                             }`}
                                         onClick={() => processMessage(input)}
                                         disabled={loading}
                                     >
-                                        {loading ? <Sparkles size={18} className="animate-spin" /> : <ArrowUp size={20} />}
+                                        {loading ? <Sparkles size={16} className="animate-spin" /> : <ArrowUp size={18} />}
                                     </Button>
                                 </div>
                             </div>
                         </>
                     )}
                 </CardContent>
+
+                {/* Resize Handle */}
+                <div
+                    className="resize-handle absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1 hover:bg-gray-100 rounded-tl-xl transition-colors"
+                    onMouseDown={handleResizeMouseDown}
+                >
+                    <div className="w-2 h-2 border-b-2 border-r-2 border-gray-400/50 rounded-br-[1px]" />
+                </div>
             </Card>
         </div>
     );

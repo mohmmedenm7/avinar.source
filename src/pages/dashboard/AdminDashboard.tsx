@@ -25,7 +25,7 @@ import { TrainingCentersComponent } from "@/components/admin/TrainingCentersComp
 import LiveStreamManager from "@/components/admin/LiveStreamManager";
 import { AddProductModal } from "@/components/admin/AddProductModal";
 import HeroBannerManager from "@/components/admin/HeroBannerManager";
-import CourseManagementAI from "@/components/instructor/CourseManagementAI";
+import CourseManagementAI from "@/components/instructor/course-management/CourseManagementAI";
 
 // Icons
 import {

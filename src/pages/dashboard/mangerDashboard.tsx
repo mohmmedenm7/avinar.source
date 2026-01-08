@@ -20,14 +20,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
-import InstructorStats from "@/components/instructor/InstructorStats";
-import PendingGrading from "@/components/instructor/PendingGrading";
-import CourseAnalytics from "@/components/instructor/CourseAnalytics";
-import AiCourseOutlineGenerator from "@/components/instructor/AiCourseOutlineGenerator";
-import AIPhotopeaStudio from "@/components/instructor/AIPhotopeaStudio";
-import InstructorWallet from "@/components/instructor/InstructorWallet";
-import VideoTools from "@/components/instructor/VideoTools";
-import UdemyLinkModal from "@/components/instructor/UdemyLinkModal";
+import InstructorStats from "@/components/instructor/course-management/InstructorStats";
+import PendingGrading from "@/components/instructor/course-management/PendingGrading";
+import CourseAnalytics from "@/components/instructor/course-management/CourseAnalytics";
+import AiCourseOutlineGenerator from "@/components/instructor/course-management/AiCourseOutlineGenerator";
+import AIPhotopeaStudio from "@/components/instructor/photopea/AIPhotopeaStudio";
+import InstructorWallet from "@/components/instructor/course-management/InstructorWallet";
+import VideoTools from "@/components/instructor/video-editor/VideoTools";
+import UdemyLinkModal from "@/components/instructor/shared/UdemyLinkModal";
 import LiveStreamManager from "@/components/admin/LiveStreamManager";
 import { AddProductModal } from '@/components/admin/AddProductModal';
 import { EditProductModal } from '@/components/admin/EditProductModal';
@@ -38,7 +38,7 @@ import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
 import ProfileSettings from "@/components/dashboard/ProfileSettings";
 import { UserNotifications } from "@/components/dashboard/UserNotifications";
 import NotificationBell from "@/components/dashboard/NotificationBell";
-import CourseManagementAI from "@/components/instructor/CourseManagementAI";
+import CourseManagementAI from "@/components/instructor/course-management/CourseManagementAI";
 
 interface Course {
   _id: string;
@@ -119,6 +119,8 @@ export default function InstructorDashboard() {
   const [chatRecipient, setChatRecipient] = useState<string | undefined>(undefined);
   const [latestCommunities, setLatestCommunities] = useState<CommunityPost[]>([]);
   const [loadingCommunities, setLoadingCommunities] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   // Track visited tabs to keep heavy components mounted
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(["overview"]));
@@ -347,6 +349,22 @@ export default function InstructorDashboard() {
     }
   };
 
+
+  const fetchProjects = async () => {
+    if (!token) return;
+    setLoadingProjects(true);
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/v1/projects`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProjects(res.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchCourses();
@@ -354,6 +372,7 @@ export default function InstructorDashboard() {
       fetchPendingGrading();
       checkUdemyLinkStatus();
       fetchLatestCommunities();
+      fetchProjects();
     }
   }, [token]);
 
@@ -914,8 +933,10 @@ export default function InstructorDashboard() {
             </div>
 
             {/* Persist Video Tools State */}
-            <div className="h-full" style={{ display: activeTab === "video-tools" ? 'block' : 'none' }}>
-              {(visitedTabs.has("video-tools") || activeTab === "video-tools") && <VideoTools />}
+            <div className="h-full flex flex-col" style={{ display: activeTab === "video-tools" ? 'flex' : 'none' }}>
+              <div className="flex-1 min-h-[600px] h-full">
+                {(visitedTabs.has("video-tools") || activeTab === "video-tools") && <VideoTools />}
+              </div>
             </div>
 
             {/* Persist Chat State */}
@@ -1016,7 +1037,8 @@ export default function InstructorDashboard() {
           token={token || ''}
           fetchProducts={fetchCourses}
         />
-      )}
+      )
+      }
 
       {
         editingProduct && (

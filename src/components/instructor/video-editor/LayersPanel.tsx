@@ -31,7 +31,7 @@ interface LayersPanelProps {
     tracks: Track[];
     onUpdateTrack: (id: number, updates: Partial<Track>) => void;
     onDeleteTrack: (id: number) => void;
-    onAddTrack: (type: 'video' | 'audio') => void;
+    onAddTrack: (type: 'video' | 'audio' | 'overlay') => void;
     onReorderTracks: (tracks: Track[]) => void;
     onDuplicateTrack: (id: number) => void;
     selectedTrackId?: number;
@@ -288,8 +288,8 @@ export default function LayersPanel({
                                         <button
                                             key={color}
                                             className={`w-6 h-6 rounded border-2 transition-all ${track.color === color
-                                                    ? 'border-white scale-110'
-                                                    : 'border-transparent hover:border-gray-500'
+                                                ? 'border-white scale-110'
+                                                : 'border-transparent hover:border-gray-500'
                                                 }`}
                                             style={{ backgroundColor: color }}
                                             onClick={(e) => {
