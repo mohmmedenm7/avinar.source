@@ -81,8 +81,7 @@ const FloatingChatButton: React.FC<FloatingChatButtonProps> = ({
         navigate('/admin/support');
     };
 
-    // Don't show if not logged in
-    if (!token) return null;
+    // Variant and role logic handled in render
 
     const positionClasses = position === 'bottom-right'
         ? 'bottom-6 end-6'
@@ -165,8 +164,8 @@ const FloatingChatButton: React.FC<FloatingChatButtonProps> = ({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isOpen
-                        ? 'bg-gray-800 dark:bg-gray-700'
-                        : 'bg-gradient-to-r from-blue-600 to-purple-600'
+                    ? 'bg-gray-800 dark:bg-gray-700'
+                    : 'bg-gradient-to-r from-blue-600 to-purple-600'
                     }`}
             >
                 {isOpen ? (

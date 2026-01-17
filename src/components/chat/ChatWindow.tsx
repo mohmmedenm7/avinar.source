@@ -80,12 +80,12 @@ const ChatWindow: React.FC = () => {
         u => u.conversationId === currentConversation._id
     );
 
-    const handleSend = (content: string) => {
+    const handleSend = (content: string, messageType: string = 'text') => {
         if (editingMessage) {
             editMessage(editingMessage._id, content);
             setEditingMessage(null);
         } else {
-            sendMessage(content, replyTo?._id);
+            sendMessage(content, replyTo?._id, messageType);
             setReplyTo(null);
         }
     };

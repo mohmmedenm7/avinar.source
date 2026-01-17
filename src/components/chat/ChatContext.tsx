@@ -33,6 +33,8 @@ export interface Conversation {
         profileImg?: string;
         chatStatus: string;
         lastSeen?: string;
+        email?: string;
+        phone?: string;
         role: string;
     }[];
     type: 'direct' | 'admin_support' | 'group';
@@ -68,7 +70,7 @@ export interface ChatContextType {
     // Actions
     loadConversations: () => Promise<void>;
     selectConversation: (conversation: Conversation) => void;
-    sendMessage: (content: string, replyTo?: string) => void;
+    sendMessage: (content: string, replyTo?: string, messageType?: string) => void;
     editMessage: (messageId: string, content: string) => void;
     deleteMessage: (messageId: string) => void;
     togglePin: (messageId: string) => void;

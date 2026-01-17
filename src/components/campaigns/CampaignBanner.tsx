@@ -46,8 +46,13 @@ const CampaignBanner = () => {
         handleClose();
     };
 
-    // Don't render if loading, no campaign, or user closed it
-    if (loading || !campaign || !isVisible) {
+    // Check for essential data
+    const isValidCampaign = campaign &&
+        campaign.discountValue !== undefined &&
+        campaign.endDate &&
+        !isNaN(new Date(campaign.endDate).getTime());
+
+    if (loading || !campaign || !isVisible || !isValidCampaign) {
         return null;
     }
 
@@ -57,9 +62,10 @@ const CampaignBanner = () => {
         return null;
     }
 
+    const discountValue = campaign.discountValue || 0;
     const discountText = campaign.discountType === 'percentage'
-        ? `${campaign.discountValue}% خصم`
-        : `خصم ${campaign.discountValue} جنيه`;
+        ? `${discountValue}% خصم`
+        : `خصم ${discountValue} جنيه`;
 
     const bgColor = campaign.bannerColor || 'bg-gradient-to-r from-orange-500 to-red-500';
 

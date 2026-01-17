@@ -8,8 +8,10 @@ import { useTranslation } from "react-i18next";
 import { Progress } from "@/components/ui/progress";
 import { ChatButton } from "@/components/chat";
 // import CourseDiscussions from "@/components/courses/CourseDiscussions";
+import StudyAssistant from "@/components/courses/StudyAssistant";
 
 interface Lecture {
+  _id: string;
   title: string;
   video: string;
   description: string;
@@ -511,6 +513,11 @@ const CourseViewPage = () => {
           <ReviewsSection productId={courseId || ""} />
         </div>
       </div>
+      <StudyAssistant
+        courseId={courseId || ""}
+        lectureId={selectedLecture?._id}
+        lectureTitle={selectedLecture?.title}
+      />
     </div>
   );
 };

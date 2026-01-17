@@ -132,30 +132,56 @@ export default function VideoTools() {
     const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState("");
 
-    const handleCreateTeam = () => {
+    // Persist Team State
+    useEffect(() => {
+        const savedTeam = localStorage.getItem('avinar_current_team');
+        if (savedTeam) {
+            try {
+                const parsed = JSON.parse(savedTeam);
+                setCurrentTeam(parsed);
+                setCollaborators([{ id: '1', name: 'أنت (المدير)', avatar: '', status: 'online' }]);
+            } catch (e) { }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (currentTeam) {
+            localStorage.setItem('avinar_current_team', JSON.stringify(currentTeam));
+        } else {
+            localStorage.removeItem('avinar_current_team');
+        }
+    }, [currentTeam]);
+
+    // Silence Removal Review State
+    const [silenceSegments, setSilenceSegments] = useState<{ id: string, start: number, duration: number }[]>([]);
+    const [silenceReviewingClipId, setSilenceReviewingClipId] = useState<string | null>(null);
+
+    const handleCreateTeam = useCallback(() => {
         if (!teamNameInput.trim()) return;
-        const mockTeam = { id: 'team-1', name: teamNameInput, inviteCode: Math.random().toString(36).substring(7).toUpperCase() };
+        const mockTeam = { id: 'team-' + Date.now(), name: teamNameInput, inviteCode: Math.random().toString(36).substring(7).toUpperCase() };
         setCurrentTeam(mockTeam);
         setCollaborators([{ id: '1', name: 'أنت (المدير)', avatar: '', status: 'online' }]);
+        setTeamNameInput("");
         toast({ title: 'تم إنشاء الفريق', description: `اسم الفريق: ${mockTeam.name}` });
-    };
+    }, [teamNameInput, toast]);
 
-    const handleJoinTeam = () => {
+    const handleJoinTeam = useCallback(() => {
         if (!inviteCodeInput.trim()) return;
-        setCurrentTeam({ id: 'team-join', name: 'مشروع خارجي', inviteCode: inviteCodeInput });
+        setCurrentTeam({ id: 'team-join-' + Date.now(), name: 'مشروع خارجي', inviteCode: inviteCodeInput });
         setCollaborators([
             { id: '1', name: 'المدير', avatar: '', status: 'online' },
             { id: '2', name: 'أنت', avatar: '', status: 'online' }
         ]);
+        setInviteCodeInput("");
         toast({ title: 'تم الانضمام للفريق' });
-    };
+    }, [inviteCodeInput, toast]);
 
-    const addComment = () => {
+    const addComment = useCallback(() => {
         if (!newComment.trim()) return;
         const comment = { id: Date.now().toString(), text: newComment, timestamp: currentTime, userName: 'أنت', createdAt: new Date() };
         setComments(prev => [comment, ...prev]);
         setNewComment("");
-    };
+    }, [newComment, currentTime]);
 
     // AI & Canvas
     const [isAIChannelOpen, setIsAIChannelOpen] = useState(false);
@@ -169,11 +195,14 @@ export default function VideoTools() {
     const [draggingMaskPoint, setDraggingMaskPoint] = useState<{ clipId: string, pointIndex: number } | null>(null);
 
     // Auto-switch to properties for tools
+    const lastToolMode = useRef(toolMode);
     useEffect(() => {
-        if (toolMode !== 'select') {
+        // Only switch if the tool actually CHANGED and we aren't in the Team tab
+        if (toolMode !== 'select' && toolMode !== lastToolMode.current && activeTab !== 'team') {
             setActiveTab('properties');
         }
-    }, [toolMode]);
+        lastToolMode.current = toolMode;
+    }, [toolMode, activeTab]);
 
     // Refs
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -626,46 +655,85 @@ export default function VideoTools() {
             description: 'الذكاء الاصطناعي يحدد مناطق الكلام والفراغات...',
         });
 
-        // Simulation logic: Split the clip into 3 parts and remove the middle 
-        // This makes the edits VISIBLE on the timeline as requested.
         setTimeout(() => {
-            const clipDuration = (clip.trimEnd - clip.trimStart) / clip.speed;
-            if (clipDuration < 4) {
+            const clipDuration = getClipDuration(clip);
+            if (clipDuration < 2) {
                 toast({ title: 'المقطع قصير جداً للتحليل' });
                 return;
             }
 
-            const split1_local = clipDuration * 0.4;
-            const silence_duration = clipDuration * 0.15;
-            const split2_local = split1_local + silence_duration;
+            // Generate 2-3 mock silent regions covering the clip
+            const segments = [
+                { id: crypto.randomUUID(), start: clip.startAt + clipDuration * 0.25, duration: clipDuration * 0.1 },
+                { id: crypto.randomUUID(), start: clip.startAt + clipDuration * 0.65, duration: clipDuration * 0.15 }
+            ];
 
-            // First part
-            const part1 = {
-                ...JSON.parse(JSON.stringify(clip)),
-                trimEnd: clip.trimStart + split1_local * clip.speed
-            };
-
-            // Second part (After silence)
-            const part2 = {
-                ...JSON.parse(JSON.stringify(clip)),
-                id: crypto.randomUUID(),
-                startAt: clip.startAt + split1_local, // Snapped to part1 end (silence removed)
-                trimStart: clip.trimStart + split2_local * clip.speed
-            };
-
-            setClips(prev => {
-                const filtered = prev.filter(c => c.id !== clipId);
-                return [...filtered, part1, part2];
-            });
-
-            setSelectedClipIds([part1.id, part2.id]);
-            saveToHistory();
+            setSilenceSegments(segments);
+            setSilenceReviewingClipId(clipId);
+            setSelectedClipIds([clipId]);
 
             toast({
-                title: 'اكتمل المونتاج الصامت',
-                description: `تم إجراء ${1} عملية قص وإزالة ${silence_duration.toFixed(1)} ثانية من الصمت.`,
+                title: 'اكتمل التحليل البصري',
+                description: `تم تحديد ${segments.length} فجوات صمت. راجعها على التايم لاين.`,
             });
-        }, 2000);
+        }, 1500);
+    };
+
+    const applySilenceCuts = () => {
+        if (!silenceReviewingClipId || silenceSegments.length === 0) return;
+        const originalClip = clips.find(c => c.id === silenceReviewingClipId);
+        if (!originalClip) return;
+
+        saveToHistory();
+
+        // Sort segments to process from start to end
+        const sortedSils = [...silenceSegments].sort((a, b) => a.start - b.start);
+
+        let currentClips = [...clips].filter(c => c.id !== silenceReviewingClipId);
+        let currentTimeOffset = 0;
+        let lastValidEndTimeline = originalClip.startAt;
+        let lastValidEndTrim = originalClip.trimStart;
+
+        const results: Clip[] = [];
+        let cursor = originalClip.startAt;
+
+        // Loop through silences and create "voice" chunks
+        sortedSils.forEach((sil, idx) => {
+            if (sil.start > cursor + 0.1) {
+                const chunkDuration = sil.start - cursor;
+                results.push({
+                    ...JSON.parse(JSON.stringify(originalClip)),
+                    id: crypto.randomUUID(),
+                    startAt: lastValidEndTimeline,
+                    trimStart: lastValidEndTrim,
+                    trimEnd: lastValidEndTrim + (chunkDuration * originalClip.speed)
+                });
+                lastValidEndTimeline += chunkDuration;
+                lastValidEndTrim += (chunkDuration * originalClip.speed);
+            }
+            // Skip the silence
+            cursor = sil.start + sil.duration;
+            // The next voice chunk starts at the trim point AFTER silence
+            lastValidEndTrim += (sil.duration * originalClip.speed);
+        });
+
+        // Add final chunk if exists
+        const totalEnd = originalClip.startAt + getClipDuration(originalClip);
+        if (cursor < totalEnd - 0.1) {
+            const finalDur = totalEnd - cursor;
+            results.push({
+                ...JSON.parse(JSON.stringify(originalClip)),
+                id: crypto.randomUUID(),
+                startAt: lastValidEndTimeline,
+                trimStart: lastValidEndTrim,
+                trimEnd: lastValidEndTrim + (finalDur * originalClip.speed)
+            });
+        }
+
+        setClips([...currentClips, ...results]);
+        setSilenceReviewingClipId(null);
+        setSilenceSegments([]);
+        toast({ title: 'تم تطبيق القص التلقائي بنجاح', description: `تم إنتاج ${results.length} مقاطع مصفاة.` });
     };
 
     const finishDrawing = (isClosed: boolean = true) => {
@@ -947,11 +1015,11 @@ export default function VideoTools() {
                 if (!selectedClipIds.includes(clip.id)) {
                     setSelectedClipIds([clip.id]);
                 }
-                setActiveTab('properties');
+                if (activeTab !== 'team') setActiveTab('properties');
             }
         } else {
             setSelectedClipIds([clip.id]);
-            setActiveTab('properties');
+            if (activeTab !== 'team') setActiveTab('properties');
         }
 
 
@@ -1547,8 +1615,32 @@ export default function VideoTools() {
     // --- Shortcuts ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            console.log('Key pressed:', e.key, 'Code:', e.code);
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+            // Guard: Skip shortcuts if user is typing in any input-like element
+            const activeEl = document.activeElement as HTMLElement | null;
+            const target = e.target as HTMLElement | null;
+
+            // Check both activeElement and event target for maximum compatibility
+            const isInputFocused = (el: HTMLElement | null): boolean => {
+                if (!el) return false;
+                return (
+                    el instanceof HTMLInputElement ||
+                    el instanceof HTMLTextAreaElement ||
+                    el.isContentEditable ||
+                    el.tagName === 'INPUT' ||
+                    el.tagName === 'TEXTAREA' ||
+                    el.getAttribute('data-no-shortcuts') === 'true' ||
+                    !!el.closest('[data-no-shortcuts="true"]') ||
+                    !!el.closest('[role="dialog"]') ||
+                    !!el.closest('[data-radix-dialog-content]')
+                );
+            };
+
+            if (isInputFocused(activeEl) || isInputFocused(target)) {
+                console.log('[Shortcuts] Blocked - input focused:', { activeEl: activeEl?.tagName, target: target?.tagName });
+                return;
+            }
+
+            console.log('[Shortcuts] Processing key:', e.key, { activeEl: activeEl?.tagName, target: target?.tagName });
 
             // Modifiers
             if (e.ctrlKey || e.metaKey) {
@@ -2122,6 +2214,20 @@ export default function VideoTools() {
                     const target = clips.find(c => (c.textContent || c.name || "").includes(entities.query));
                     if (target) removeSilence(target.id);
                 }
+                break;
+
+            case 'open_team_panel':
+                setActiveTab('team');
+                toast({ title: 'تم فتح لوحة الفريق' });
+                break;
+
+            case 'create_team':
+                const name = entities.name || "فريق جديد";
+                const newTeam = { id: 'team-' + Date.now(), name: name, inviteCode: Math.random().toString(36).substring(7).toUpperCase() };
+                setCurrentTeam(newTeam);
+                setCollaborators([{ id: '1', name: 'أنت (المدير)', avatar: '', status: 'online' }]);
+                setActiveTab('team');
+                toast({ title: 'تم إنشاء الفريق عبر الذكاء الاصطناعي', description: `اسم الفريق: ${name}` });
                 break;
         }
     }, [clips, currentTime, isPlaying, selectedClipIds, undo, redo, addTrack, addTextClip, splitClip, updateClip, saveToHistory, toast, setClips, setSelectedClipIds, setCurrentTime, setIsPlaying, setCanvasBackgroundColor, setShowColorGrading, tracks]);
@@ -3045,6 +3151,50 @@ export default function VideoTools() {
                                 />
                             ))}
                         </div>
+                        {/* Silence Review Floating Panel */}
+                        {silenceReviewingClipId && (
+                            <div className="fixed bottom-40 right-4 w-72 bg-[#1a1d21]/95 backdrop-blur-xl border border-blue-500/30 rounded-2xl shadow-2xl z-[80] overflow-hidden animate-in slide-in-from-bottom-5">
+                                <div className="p-4 bg-blue-600/10 border-b border-white/5 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                        <span className="text-xs font-bold text-white font-arabic">مراجعة حذف الصمت</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white" onClick={() => { setSilenceReviewingClipId(null); setSilenceSegments([]); }}><VolumeX size={14} /></Button>
+                                </div>
+                                <ScrollArea className="h-48">
+                                    <div className="p-2 space-y-2">
+                                        {silenceSegments.map((sil, i) => (
+                                            <div
+                                                key={sil.id}
+                                                className="p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-blue-600/20 cursor-pointer transition-all flex items-center justify-between group"
+                                                onClick={() => setCurrentTime(sil.start)}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-6 h-6 rounded-lg bg-red-600/20 flex items-center justify-center text-[10px] font-bold text-red-400">{i + 1}</div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold text-gray-300 font-arabic">منطقة صمت</span>
+                                                        <span className="text-[9px] text-gray-500 font-mono">{formatTime(sil.start)} - {formatTime(sil.start + sil.duration)}</span>
+                                                    </div>
+                                                </div>
+                                                <Scissors size={12} className="text-gray-600 group-hover:text-red-400 transition-colors" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                                <div className="p-4 bg-black/40 border-t border-white/5 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between px-1 mb-1">
+                                        <span className="text-[10px] text-gray-400 font-arabic">إجمالي التوفير:</span>
+                                        <Badge variant="outline" className="text-[9px] bg-green-500/10 text-green-400 border-none font-mono">
+                                            -{silenceSegments.reduce((acc, s) => acc + s.duration, 0).toFixed(1)}s
+                                        </Badge>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button className="flex-1 bg-blue-600 hover:bg-blue-700 h-9 text-xs font-bold font-arabic" onClick={applySilenceCuts}>تطبيق القص</Button>
+                                        <Button variant="outline" className="h-9 border-gray-700 text-xs font-arabic" onClick={() => { setSilenceReviewingClipId(null); setSilenceSegments([]); }}>إلغاء</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Timeline Toolbar (Horizontal) */}
                         <div className="h-10 bg-[#1a1d21] border-t border-gray-800 flex items-center justify-between px-4 shrink-0">
@@ -3166,6 +3316,13 @@ export default function VideoTools() {
                                                 {clips.filter(c => c.trackId === track.id).map(clip => (
                                                     <div key={clip.id} onMouseDown={(e) => handleClipMouseDown(e, clip)} className={`absolute top-1 bottom-1 rounded-sm border group cursor-pointer ${selectedClipIds.includes(clip.id) ? 'ring-2 ring-blue-500 border-white z-50' : 'border-white/10 opacity-90'}`} style={{ left: clip.startAt * zoom, width: getClipDuration(clip) * zoom, background: clip.type === 'video' ? '#3b82f680' : '#ec489980' }}>
                                                         <div className="p-1 truncate text-[10px] font-bold text-white/90">{clip.name}</div>
+                                                        {silenceReviewingClipId === clip.id && silenceSegments.map(sil => (
+                                                            <div key={sil.id} className="absolute top-0 bottom-0 bg-red-600/80 border-x border-red-500 animate-pulse z-[60] shadow-[0_0_10px_rgba(255,0,0,0.5)]" style={{ left: (sil.start - clip.startAt) * zoom, width: sil.duration * zoom }}>
+                                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                                    <Scissors size={10} className="text-white bg-black/40 rounded-full p-0.5" />
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 ))}
                                             </div>
@@ -3176,6 +3333,13 @@ export default function VideoTools() {
                                                 {clips.filter(c => c.trackId === track.id).map(clip => (
                                                     <div key={clip.id} onMouseDown={(e) => handleClipMouseDown(e, clip)} className={`absolute top-1 bottom-1 rounded-sm border cursor-pointer ${selectedClipIds.includes(clip.id) ? 'ring-2 ring-blue-500 border-white z-50' : 'border-white/10'}`} style={{ left: clip.startAt * zoom, width: getClipDuration(clip) * zoom, background: '#10b98180' }}>
                                                         <div className="p-1 truncate text-[10px] font-bold text-white/90">{clip.name}</div>
+                                                        {silenceReviewingClipId === clip.id && silenceSegments.map(sil => (
+                                                            <div key={sil.id} className="absolute top-0 bottom-0 bg-red-600/60 border-x border-red-400 animate-pulse z-[60]" style={{ left: (sil.start - clip.startAt) * zoom, width: sil.duration * zoom }}>
+                                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                                    <Scissors size={8} className="text-white drop-shadow-md" />
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 ))}
                                             </div>

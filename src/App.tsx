@@ -114,8 +114,7 @@ const LayoutContent = () => {
   const location = useLocation();
   const isChat = location.pathname === '/chat';
   const isAdminSupport = location.pathname === '/admin/support';
-  const isDashboard = location.pathname.toLowerCase().includes('dashboard');
-  const isFullScreen = isChat || isAdminSupport || isDashboard;
+  const isFullScreen = isChat || isAdminSupport;
 
   return (
     <div className={`min-h-screen flex flex-col ${isFullScreen ? 'h-screen overflow-hidden' : ''}`}>
@@ -165,7 +164,7 @@ const LayoutContent = () => {
       </main>
       {!isFullScreen && <Footer />}
       {/* Floating Chat Button - appears on all pages except full screen */}
-      {!isFullScreen && !location.pathname.toLowerCase().includes('instructordashboard') && <FloatingChatButton />}
+      {!isFullScreen && <FloatingChatButton />}
     </div>
   );
 };

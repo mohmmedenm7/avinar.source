@@ -105,8 +105,8 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
         if (isOpen) {
             // Position safely within viewport
             setPosition({
-                x: Math.max(20, window.innerWidth - 340),
-                y: 80
+                x: Math.max(20, window.innerWidth - 380),
+                y: 100
             });
         }
     }, [isOpen]);

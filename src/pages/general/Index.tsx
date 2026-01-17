@@ -160,32 +160,49 @@ const Index = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.6 }}
-              className="flex flex-col sm:flex-row justify-center gap-4"
+              className="flex flex-col gap-6"
             >
-              <Button
-                size="lg"
-                className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-sky-500/20"
-                onClick={() => navigate("/register")}
-              >
-                {t('home.hero.startFree')}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 h-14 text-lg hover:scale-105 transition-transform bg-white"
-                onClick={() => navigate("/courses")}
-              >
-                {t('home.hero.browseCourses')}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 h-14 text-lg hover:scale-105 transition-transform bg-white gap-2"
-                onClick={() => navigate("/instructors")}
-              >
-                <Users size={20} />
-                {t('home.hero.instructors') || 'مدربينا'}
-              </Button>
+              <div className="flex w-full max-w-md mx-auto items-center space-x-2 bg-white rounded-full p-2 shadow-lg border border-gray-100">
+                <input
+                  type="text"
+                  placeholder={t('ابحث عن كورس...') || 'ابحث عن كورس...'}
+                  className="flex-1 px-4 py-2 bg-transparent border-none outline-none text-gray-700 placeholder:text-gray-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const query = (e.target as HTMLInputElement).value;
+                      if (query.trim()) navigate(`/courses?search=${encodeURIComponent(query)}`);
+                    }
+                  }}
+                />
+                <Button
+                  size="icon"
+                  className="rounded-full bg-sky-500 hover:bg-sky-600 text-white w-10 h-10"
+                  onClick={(e) => {
+                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                    if (input.value.trim()) navigate(`/courses?search=${encodeURIComponent(input.value)}`);
+                  }}
+                >
+                  <ArrowRight size={18} className="rotate-180" />
+                </Button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Button
+                  size="lg"
+                  className="bg-sky-500 text-white hover:bg-sky-600 rounded-full px-8 h-14 text-lg font-semibold hover:scale-105 transition-transform shadow-lg shadow-sky-500/20"
+                  onClick={() => navigate("/register")}
+                >
+                  {t('home.hero.startFree')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 h-14 text-lg hover:scale-105 transition-transform bg-white"
+                  onClick={() => navigate("/courses")}
+                >
+                  {t('home.hero.browseCourses')}
+                </Button>
+              </div>
             </motion.div>
 
             {/* Hero Image / Dashboard Preview - Now with Dynamic Banners */}

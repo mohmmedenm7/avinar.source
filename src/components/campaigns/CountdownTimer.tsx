@@ -25,8 +25,19 @@ const CountdownTimer = ({ endDate, onExpire, compact = false }: CountdownTimerPr
 
     useEffect(() => {
         const calculateTimeRemaining = () => {
+            if (!endDate) {
+                setTimeRemaining({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
+                return;
+            }
+
             const end = new Date(endDate).getTime();
             const now = new Date().getTime();
+
+            if (isNaN(end)) {
+                setTimeRemaining({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 });
+                return;
+            }
+
             const total = end - now;
 
             if (total <= 0) {

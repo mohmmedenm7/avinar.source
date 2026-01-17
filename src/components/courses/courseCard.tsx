@@ -19,27 +19,43 @@ export default function CourseCard({
   toggleWishlist,
   navigate
 }: CourseCardProps) {
+
   const isPaid = course.isPaid === true;
   const isStream = course.isStream === true;
 
   const getBadges = () => {
     if (isStream) {
-      if (course.contentType === 'live') return <div className="absolute top-4 right-4 bg-red-600 animate-pulse text-white text-[10px] font-bold px-2 py-0.5 rounded-full">مباشر الآن</div>;
-      if (course.contentType === 'upcoming') return <div className="absolute top-4 right-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">بث قادم</div>;
-      if (course.contentType === 'recorded') return <div className="absolute top-4 right-4 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">جلسة مسجلة</div>;
+      if (course.contentType === 'live')
+        return <div className="absolute top-4 right-4 bg-red-600 animate-pulse text-white text-[10px] font-bold px-2 py-0.5 rounded-full">مباشر الآن</div>;
+      if (course.contentType === 'upcoming')
+        return <div className="absolute top-4 right-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">بث قادم</div>;
+      if (course.contentType === 'recorded')
+        return <div className="absolute top-4 right-4 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">جلسة مسجلة</div>;
     }
-    if (isPaid) return <div className="absolute top-4 right-4 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full text-center">مشترك</div>;
+
+    if (isPaid)
+      return <div className="absolute top-4 right-4 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">مشترك</div>;
+
     return null;
   };
 
-  const handleGo = () => {
+  const getActionLabel = () => {
     if (isStream) {
-      navigate(`/live/${course._id}`);
-    } else if (isPaid) {
-      navigate(`/course/${course._id}`);
-    } else {
-      navigate(`/course-details/${course._id}`);
+      return course.contentType === 'live'
+        ? 'دخول البث'
+        : 'عرض التفاصيل';
     }
+    return isPaid ? 'متابعة التعلم' : 'عرض التفاصيل';
+  };
+
+  const getActionPath = () => {
+    if (isStream) return `/live/${course._id}`;
+    if (isPaid) return `/course/${course._id}`;
+    return `/course-details/${course._id}`;
+  };
+
+  const handleGo = () => {
+    navigate(getActionPath());
   };
 
   return (
@@ -84,12 +100,15 @@ export default function CourseCard({
           <Button
             onClick={handleGo}
             variant={isPaid || isStream ? "default" : "outline"}
-            className={`w-full font-bold text-sm h-10 rounded-xl transition-all ${isStream && course.contentType === 'live'
+            className={`w-full font-bold text-sm h-10 rounded-xl transition-all ${
+              isStream && course.contentType === 'live'
                 ? 'bg-red-600 hover:bg-red-700 text-white border-0'
-                : (isPaid || isStream ? 'bg-blue-600 hover:bg-blue-700 text-white border-0' : 'border-blue-600 text-blue-600 hover:bg-blue-50')
-              }`}
+                : (isPaid || isStream
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-0'
+                    : 'border-blue-600 text-blue-600 hover:bg-blue-50')
+            }`}
           >
-            {isStream ? (course.contentType === 'live' ? 'دخول البث' : 'عرض التفاصيل') : (isPaid ? 'متابعة التعلم' : 'عرض التفاصيل')}
+            {getActionLabel()}
           </Button>
         </div>
       </CardContent>

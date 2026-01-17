@@ -98,16 +98,18 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
     }, [messages, currentSessionId]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (messagesEndRef.current && messagesEndRef.current.parentElement) {
+            const container = messagesEndRef.current.parentElement;
+            container.scrollTop = container.scrollHeight;
+        }
     }, [messages, view]);
 
     useEffect(() => {
         if (isOpen) {
             // Position safely within viewport
-            setPosition({
-                x: Math.max(20, window.innerWidth - 340),
-                y: 80
-            });
+            const safeX = Math.max(20, window.innerWidth - (size.w + 40));
+            const safeY = 100;
+            setPosition({ x: safeX, y: safeY });
         }
     }, [isOpen]);
 
@@ -137,16 +139,29 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDragging) {
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+
+                // Keep within boundaries
+                const maxX = window.innerWidth - size.w - 10;
+                const maxY = window.innerHeight - size.h - 10;
+
                 setPosition({
-                    x: e.clientX - dragOffset.x,
-                    y: e.clientY - dragOffset.y
+                    x: Math.max(10, Math.min(newX, maxX)),
+                    y: Math.max(10, Math.min(newY, maxY))
                 });
             } else if (isResizing) {
                 const deltaX = e.clientX - resizeStart.x;
                 const deltaY = e.clientY - resizeStart.y;
+
+                // Constraints
+                const minW = 280, minH = 300;
+                const maxW = Math.min(800, window.innerWidth - position.x - 20);
+                const maxH = Math.min(800, window.innerHeight - position.y - 20);
+
                 setSize({
-                    w: Math.max(280, resizeStart.w + deltaX), // Min width 280
-                    h: Math.max(300, resizeStart.h + deltaY)  // Min height 300
+                    w: Math.max(minW, Math.min(maxW, resizeStart.w + deltaX)),
+                    h: Math.max(minH, Math.min(maxH, resizeStart.h + deltaY))
                 });
             }
         };
@@ -180,6 +195,27 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
 
         setMessages(prev => [...prev, newUserMessage]);
         setInput("");
+
+        // Local Intent Parsing for basic commands (Premium responsiveness)
+        const lowerMsg = userMessage.toLowerCase().trim();
+        const addTextMatch = lowerMsg.match(/(اضف|أضف|add|انشئ|أنشئ|write|اكتب|أكتب)\s+(نص|كلمة|جملة|text|نصوص)\s+(.*)/i);
+
+        if (addTextMatch) {
+            const textToAppend = addTextMatch[3];
+            setTimeout(() => {
+                const assistantMsg: Message = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: `جاري إضافة النص "${textToAppend}" للمشروع...`,
+                    intent: 'add_text',
+                    timestamp: new Date()
+                };
+                setMessages(prev => [...prev, assistantMsg]);
+                onAction('add_text', { text: textToAppend });
+                setLoading(false);
+            }, 400);
+            return;
+        }
 
         try {
             const token = localStorage.getItem("token");
@@ -223,7 +259,7 @@ const VideoEditorAI = ({ onAction, isOpen, onClose }: VideoEditorAIProps) => {
             const errorMessage: Message = {
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: `❌ عذراً، حدث خطأ أثناء الاتصال بالمساعد.`,
+                content: `❌ عذراً، لم أستطع فهم الطلب أو هناك مشكلة في الاتصال. يمكنك تجربة كلمات مثل "أضف نص [محتواك]" مباشرة.`,
                 timestamp: new Date()
             };
             setMessages(prev => [...prev, errorMessage]);

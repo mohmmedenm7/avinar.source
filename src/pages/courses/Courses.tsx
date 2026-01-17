@@ -3,7 +3,7 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { API_BASE_URL } from '@/config/env';
 import { Heart, SlidersHorizontal } from "lucide-react";
@@ -31,7 +31,8 @@ const CoursesPage = () => {
   // Filter States
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [priceRange, setPriceRange] = useState<number[]>([0, 1000]);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(1000);
@@ -157,6 +158,13 @@ const CoursesPage = () => {
     fetchCourses();
   }, [token, email]);
 
+  useEffect(() => {
+    const query = searchParams.get("search");
+    if (query !== null) {
+      setSearchQuery(query);
+    }
+  }, [searchParams]);
+
   const toggleWishlist = async (productId: string, e: any) => {
     e.stopPropagation();
     if (!token) {
@@ -182,8 +190,12 @@ const CoursesPage = () => {
 
   const filteredCourses = useMemo(() => {
     let result = courses.filter(course => {
-      // Search
-      const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase());
+      // Search - البحث في العنوان، النوع، والوصف
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        course.title.toLowerCase().includes(query) ||
+        (course.contentType && course.contentType.toLowerCase().includes(query)) ||
+        (course.description && course.description.toLowerCase().includes(query));
 
       // Category (Multi-select)
       const matchesCategory = selectedCategories.length === 0 ||
@@ -207,6 +219,12 @@ const CoursesPage = () => {
         return (a.price || 0) - (b.price || 0);
       } else if (sortBy === 'price-high') {
         return (b.price || 0) - (a.price || 0);
+      } else if (sortBy === 'popular') {
+        // Sort by popularity (assuming ratingsAverage or sold count implies popularity)
+        // Adjust these fields based on your actual data structure
+        const scoreA = (a.ratingsAverage || 0) * 10 + (a.sold || 0);
+        const scoreB = (b.ratingsAverage || 0) * 10 + (b.sold || 0);
+        return scoreB - scoreA;
       } else {
         // Newest (assuming createdAt exists, otherwise fallback to index/default)
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -247,6 +265,7 @@ const CoursesPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">الأحدث</SelectItem>
+                <SelectItem value="popular">شائع</SelectItem>
                 <SelectItem value="price-low">السعر: الأقل إلى الأعلى</SelectItem>
                 <SelectItem value="price-high">السعر: الأعلى إلى الأقل</SelectItem>
               </SelectContent>

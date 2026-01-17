@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, MoreVertical, Reply, Edit2, Trash2, Pin, Copy } from 'lucide-react';
+import { Check, CheckCheck, MoreVertical, Reply, Edit2, Trash2, Pin, Copy, Paperclip } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { API_BASE_URL } from '@/config/env';
@@ -121,9 +121,50 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                     )}
 
                     {/* Content */}
-                    <p className={`whitespace-pre-wrap break-words ${isOnlyEmojis ? 'text-4xl' : ''}`}>
-                        {message.content}
-                    </p>
+                    {message.messageType === 'audio' ? (
+                        <div className="py-2 min-w-[200px]">
+                            <audio
+                                src={message.content.startsWith('http') ? message.content : `${API_BASE_URL}/${message.content}`}
+                                controls
+                                className={`w-full max-h-10 ${isOwn ? 'filter invert' : ''}`}
+                            />
+                        </div>
+                    ) : message.messageType === 'image' || message.content.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                        <div className="py-2">
+                            <img
+                                src={message.content.startsWith('http') ? message.content : `${API_BASE_URL}/${message.content}`}
+                                alt="Chat attachment"
+                                className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(message.content.startsWith('http') ? message.content : `${API_BASE_URL}/${message.content}`, '_blank')}
+                            />
+                        </div>
+                    ) : message.messageType === 'video' || message.content.match(/\.(mp4|webm|ogg)$/i) ? (
+                        <div className="py-2">
+                            <video
+                                src={message.content.startsWith('http') ? message.content : `${API_BASE_URL}/${message.content}`}
+                                controls
+                                className="max-w-full rounded-lg"
+                            />
+                        </div>
+                    ) : message.messageType === 'file' ? (
+                        <div className="py-2">
+                            <a
+                                href={message.content.startsWith('http') ? message.content : `${API_BASE_URL}/${message.content}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 p-3 rounded-lg border ${isOwn ? 'bg-blue-600 border-blue-400' : 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600'}`}
+                            >
+                                <Paperclip className="w-5 h-5" />
+                                <span className="text-sm truncate max-w-[150px]">
+                                    {message.content.split('/').pop() || 'تحميل ملف'}
+                                </span>
+                            </a>
+                        </div>
+                    ) : (
+                        <p className={`whitespace-pre-wrap break-words ${isOnlyEmojis ? 'text-4xl' : ''}`}>
+                            {message.content}
+                        </p>
+                    )}
 
                     {/* Meta info */}
                     <div className={`flex items-center gap-1 mt-1 text-xs ${isOwn ? 'text-blue-100' : 'text-gray-500'

@@ -212,13 +212,13 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }
     }, [socket, token]);
 
-    const sendMessage = useCallback((content: string, replyTo?: string) => {
+    const sendMessage = useCallback((content: string, replyTo?: string, messageType: string = 'text') => {
         if (!socket || !currentConversation || !content.trim()) return;
 
         socket.emit('send_message', {
             conversationId: currentConversation._id,
             content,
-            messageType: 'text',
+            messageType,
             replyTo,
         });
     }, [socket, currentConversation]);

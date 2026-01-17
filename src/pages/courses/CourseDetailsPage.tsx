@@ -374,12 +374,14 @@ const CourseDetailsPage = () => {
                             {/* Instructor */}
                             {course.instructor && (
                                 <div className="flex items-center gap-4">
-                                    <img
-                                        src={`${API_BASE_URL}/users/${course.instructor?.profileImg}`}
-                                        onError={(e) => e.currentTarget.src = "https://github.com/shadcn.png"}
-                                        alt="Instructor"
-                                        className="w-12 h-12 rounded-full object-cover border-2 border-sky-400"
-                                    />
+                                    <Link to={`/instructor/${course.instructor._id}`} className="shrink-0 transition-transform hover:scale-105">
+                                        <img
+                                            src={getImageUrl(course.instructor?.profileImg)}
+                                            onError={(e) => e.currentTarget.src = "https://github.com/shadcn.png"}
+                                            alt="Instructor"
+                                            className="w-12 h-12 rounded-full object-cover border-2 border-sky-400"
+                                        />
+                                    </Link>
                                     <div>
                                         <p className="text-gray-400 text-sm">المدرب</p>
                                         <Link to={`/instructor/${course.instructor._id}`} className="text-white font-semibold hover:text-sky-400 transition">
@@ -681,12 +683,14 @@ const CourseDetailsPage = () => {
                                 </h2>
 
                                 <div className="flex items-start gap-6">
-                                    <img
-                                        src={`${API_BASE_URL}/users/${course.instructor?.profileImg}`}
-                                        onError={(e) => e.currentTarget.src = "https://github.com/shadcn.png"}
-                                        alt="Instructor"
-                                        className="w-24 h-24 rounded-2xl object-cover border-2 border-gray-100"
-                                    />
+                                    <Link to={`/instructor/${course.instructor._id}`} className="shrink-0 transition-transform hover:scale-105">
+                                        <img
+                                            src={getImageUrl(course.instructor?.profileImg)}
+                                            onError={(e) => e.currentTarget.src = "https://github.com/shadcn.png"}
+                                            alt="Instructor"
+                                            className="w-24 h-24 rounded-2xl object-cover border-2 border-gray-100"
+                                        />
+                                    </Link>
                                     <div className="flex-1">
                                         <h3 className="text-xl font-bold text-gray-900 mb-1">{course.instructor?.name}</h3>
                                         <p className="text-sky-600 font-medium mb-3">
