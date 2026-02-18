@@ -1,0 +1,55 @@
+[33m62ead1d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Remove broken submodule reference
+[33m11c2e98[m Clean up Qwen2 remnants and prepare repo for Netlify
+[33m8eefa01[m Initial commit
+[33m6237420[m Initial commit
+[33ma6bf813[m Initial commit
+[33m01639e6[m sync dependencies and fix drei version
+[33mdb290a5[m Fix React version conflict by downgrading three-fiber libs
+[33m8b955a8[m Fix dependencies and add Video Tools
+[33md389a21[m your message here
+[33m5e83826[m وصف التعديلات الأخيرة
+[33m2586033[m تعديل الملفات الأخيرة وحل مشاكل لوحة التحكمv1
+[33mfc6ee71[m تعديل الملفات الأخيرة وحل مشاكل لوحة التحكمv1
+[33m53d32c0[m تعديل الملفات الأخيرة وحل مشاكل لوحة التحكمv1
+[33m132510a[m وصف التعديل
+[33m752260b[m وصف التعديل
+[33mc3530f7[m وصف التعديلات الأخيرة
+[33m0e53a7b[m وصف التعديلات الأخيرة
+[33m6d137ff[m وصف التعديلات الأخيرة66
+[33mbb7ce9a[m Add Vercel proxy configuration for CORS
+[33m8df49be[m تعديل الملفات الأخيرة وحل مشاكل لوحة التحكم
+[33m8de5aec[m merge fix
+[33m19d97ef[m Update README.md
+[33m8fdc6a7[m Update AdminDashboard.tsx
+[33m8359ed6[m Update Courses.tsx
+[33md43e0f6[m Update App.tsx
+[33m6b7cbba[m Update Footer.tsx
+[33mdda59ee[m Update index.html
+[33m7c3f217[m Update index.html
+[33m1c4ffe1[m Update index.html
+[33md80582e[m Update index.html
+[33me165ea8[m Add files via upload
+[33meee998e[m Update index.html
+[33m71a931f[m Update index.html
+[33mdda9106[m Add files via upload
+[33m859dea0[m Add files via upload
+[33md3039c3[m Add files via upload
+[33ma96bce1[m Add files via upload
+[33mdf64457[m Update Navbar.tsx
+[33mbc24b7a[m Update Footer.tsx
+[33m1575f3d[m Update Register.tsx
+[33m25767ec[m Update Login.tsx
+[33ma49088c[m Update Courses.tsx
+[33mce41674[m Update Index.tsx
+[33m2b77b07[m Update App.tsx
+[33m4c9725c[m Add new feature
+[33md491c36[m Add authentication feature
+[33m7cba364[m Connect Supabase project to app
+[33m5d6d7c2[m Add admin dashboard button
+[33m21bc40e[m Hide Login/Register for Admin Only
+[33mce131c3[m Add Navbar to All Pages and Connect Database
+[33m70688f4[m Add admin features and improvements
+[33ma37b2a9[m Add navbar and footer components
+[33me875e6d[m Add authentication and admin pages
+[33mabc7c4a[m Initialize project structure and files
+[33m1da7dab[m Use tech stack vite_react_shadcn_ts [skip gpt_engineer]
