@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Play, Users, Clock, CheckCircle, ChevronDown, ChevronUp, MessageCircle, Star, Settings, BookOpen, Download, Share2 } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
@@ -29,6 +29,7 @@ interface Course {
   description: string;
   price: number;
   imageCover?: string;
+  previewVideo?: string;
   curriculum?: Section[];
   whatWillYouLearn?: string[];
   instructor?: string;
@@ -344,6 +345,39 @@ const CourseViewPage = () => {
                         src={videoUrl}
                         controls
                         onEnded={markLessonComplete}
+                        className="w-full h-full object-contain"
+                      />
+                    );
+                  }
+                })()}
+              </div>
+            ) : course?.previewVideo ? (
+              <div className="w-full h-full flex items-center justify-center">
+                {(() => {
+                  const previewUrl = course.previewVideo;
+                  const isYouTube = previewUrl.includes('youtube.com') || previewUrl.includes('youtu.be');
+
+                  if (isYouTube) {
+                    let videoId = '';
+                    if (previewUrl.includes('youtube.com/watch?v=')) {
+                      videoId = previewUrl.split('v=')[1]?.split('&')[0];
+                    } else if (previewUrl.includes('youtu.be/')) {
+                      videoId = previewUrl.split('youtu.be/')[1]?.split('?')[0];
+                    }
+                    return (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowFullScreen
+                        title={course.title}
+                      />
+                    );
+                  } else {
+                    return (
+                      <video
+                        src={previewUrl}
+                        controls
                         className="w-full h-full object-contain"
                       />
                     );

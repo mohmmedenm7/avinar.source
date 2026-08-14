@@ -188,7 +188,8 @@
         "courseDeleted": "تم حذف الدورة بنجاح",
         "deleteError": "حدث خطأ أثناء الحذف",
         "noDescription": "لا يوجد وصف متاح",
-        "myStudents": "طلابي"
+        "myStudents": "طلابي",
+        "noCommunities": "لا توجد مجتمعات بعد"
     },
     "chat": {
         "contactSupport": "تواصل مع الدعم",

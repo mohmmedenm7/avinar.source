@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -136,7 +136,7 @@ const CourseFormModal = ({ course, closeModal, fetchCourses }: Props) => {
 
     // Preview Video - either file or URL
     if (formData.previewVideo instanceof File) {
-      fd.append("previewVideo", formData.previewVideo);
+      fd.append("videos", formData.previewVideo);
     }
     if (formData.previewVideoUrl && formData.previewVideoUrl.trim()) {
       fd.append("previewVideoUrl", formData.previewVideoUrl.trim());

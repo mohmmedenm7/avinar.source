@@ -1,22 +1,9 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
-  Library,
-  TrendingUp,
-  Heart,
-  ShoppingBag,
-  Trophy,
-  FileText,
-  GraduationCap,
-  User,
-  LogOut,
-  Search as SearchIcon,
-  Bell,
-  ChevronRight,
-  LayoutDashboard,
-  PlusCircle,
-  MessageCircle,
-  Sparkles,
-  Video
+  Library, TrendingUp, Heart, ShoppingBag, Trophy, FileText,
+  GraduationCap, User, LogOut, Search as SearchIcon, Bell,
+  ChevronRight, LayoutDashboard, PlusCircle, MessageCircle,
+  Sparkles, Video, BookOpen, Clock, Award, Star, Play
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +13,6 @@ import { getImageUrl } from "@/utils/imageUtils";
 import axios from "axios";
 import { API_BASE_URL } from "@/config/env";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 
@@ -59,22 +45,20 @@ const UserDashboard = () => {
   const { t, i18n } = useTranslation();
   const [purchasedProducts, setPurchasedProducts] = useState<Product[]>([]);
   const [unpurchasedProducts, setUnpurchasedProducts] = useState<Product[]>([]);
-  const [activeTab, setActiveTab] = useState("gamification");
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
-
-  // New state for API data
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [quizResults, setQuizResults] = useState<any[]>([]);
   const [assignmentResults, setAssignmentResults] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [allProgress, setAllProgress] = useState<any[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const email = localStorage.getItem("email");
 
-  // Check payment status for a product
   const fetchPaymentStatus = async (productId: string): Promise<boolean> => {
     if (!email || !token) return false;
     try {
@@ -89,7 +73,6 @@ const UserDashboard = () => {
     } catch (error) { return false; }
   };
 
-  // Fetch all products
   const fetchProducts = async () => {
     if (!token) return;
     setLoading(true);
@@ -167,325 +150,407 @@ const UserDashboard = () => {
     }
   };
 
+  // Resolve image for products
+  const resolveProductImage = (imageCover?: string) => {
+    if (!imageCover) return "/placeholder-course.png";
+    if (imageCover.startsWith('http://') || imageCover.startsWith('https://')) return imageCover;
+    if (imageCover.includes('/')) return `${API_BASE_URL}/${imageCover}`;
+    return `${API_BASE_URL}/products/${imageCover}`;
+  };
+
   const menuItems = [
-    { id: "gamification", label: t('dashboard.gamification'), icon: <LayoutDashboard size={20} /> },
-    { id: "purchased", label: t('dashboard.myCourses'), icon: <Library size={20} /> },
-    { id: "live", label: 'بث مباشر', icon: <Video size={20} /> },
-    { id: "available", label: t('dashboard.explore'), icon: <ShoppingBag size={20} /> },
-    { id: "chat", label: t('dashboard.chat') || 'الرسائل', icon: <MessageCircle size={20} /> },
-    { id: "ai-chat", label: t('dashboard.aiAssistant') || 'المساعد الذكي', icon: <Sparkles size={20} /> },
-    { id: "notifications", label: t('dashboard.notifications') || 'الإشعارات', icon: <Bell size={20} /> },
-    { id: "progress", label: t('dashboard.progress'), icon: <TrendingUp size={20} /> },
-    { id: "quizzes", label: t('dashboard.quizzes'), icon: <GraduationCap size={20} /> },
-    { id: "assignments", label: t('dashboard.assignments'), icon: <FileText size={20} /> },
-    { id: "wishlist", label: t('dashboard.wishlist'), icon: <Heart size={20} />, action: () => navigate("/wishlist") },
-    { id: "profile", label: t('dashboard.profile'), icon: <User size={20} /> },
+    { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },
+    { id: "purchased", label: "كورساتي", icon: Library },
+    { id: "progress", label: "تقدمي", icon: TrendingUp },
+    { id: "available", label: "استكشاف", icon: ShoppingBag },
+    { id: "live", label: "بث مباشر", icon: Video },
+    { id: "gamification", label: "الإنجازات", icon: Trophy },
+    { id: "quizzes", label: "الاختبارات", icon: GraduationCap },
+    { id: "assignments", label: "الواجبات", icon: FileText },
+    { id: "chat", label: "الرسائل", icon: MessageCircle },
+    { id: "ai-chat", label: "المساعد الذكي", icon: Sparkles },
+    { id: "notifications", label: "الإشعارات", icon: Bell },
+    { id: "profile", label: "الملف الشخصي", icon: User },
   ];
 
   const currentDir = i18n.language.startsWith('ar') ? 'rtl' : 'ltr';
 
+  const completedCourses = allProgress.filter(p => p.isCompleted).length;
+  const avgProgress = allProgress.length > 0 ? Math.round(allProgress.reduce((acc, p) => acc + (p.completionPercentage || 0), 0) / allProgress.length) : 0;
+
   return (
-    <div className="flex h-screen bg-[linear-gradient(135deg,#c3e7e3_0%,#dbe9f4_50%,#ebdcf0_100%)] font-sans overflow-hidden pt-20" dir={currentDir}>
-      {/* Side Main Wrapper for Glass Effect - Expanded to fill more screen */}
-      <div className="flex flex-1 m-1 sm:m-2 bg-white/40 backdrop-blur-2xl rounded-[24px] lg:rounded-[32px] shadow-2xl border border-white/50 overflow-hidden relative">
+    <div className="flex h-screen bg-gray-50 font-sans overflow-hidden pt-[72px]" dir={currentDir}>
 
-        {/* Sidebar */}
-        <aside className="w-[280px] flex flex-col border-e border-white/30 bg-white/20 backdrop-blur-sm z-10">
-          <div className="p-8 pb-4">
-            <div className="flex items-center gap-3 mb-10 text-[#2D3748]">
-              <div className="w-10 h-10 bg-[#1A365D] rounded-xl flex items-center justify-center shadow-lg shadow-[#1A365D]/20 transition-transform hover:scale-105">
-                <span className="font-bold text-white text-xl">V</span>
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight">{t('app.title')}</h1>
+      {/* Sidebar */}
+      <aside className={`${sidebarCollapsed ? 'w-[72px]' : 'w-[240px]'} flex flex-col bg-white border-e border-gray-100 transition-all duration-300 z-10`}>
+        {/* Logo */}
+        <div className={`p-4 ${sidebarCollapsed ? 'px-3' : 'px-5'} border-b border-gray-50`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+              <span className="font-bold text-white text-lg">A</span>
             </div>
+            {!sidebarCollapsed && <h1 className="text-lg font-bold text-gray-800 tracking-tight">Avinar</h1>}
+          </div>
+        </div>
 
-            <nav className="space-y-2 overflow-y-auto max-h-[calc(100vh-320px)] pe-2 custom-scrollbar">
-              {menuItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={item.action ? item.action : () => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-[20px] transition-all duration-300 relative group overflow-hidden ${activeTab === item.id
-                    ? "bg-[#1A365D] text-white shadow-xl shadow-[#1A365D]/20 translate-x-1"
-                    : "text-[#4A5568] hover:bg-white/40 hover:text-[#2D3748]"
-                    }`}
-                >
-                  <span className={`transition-colors duration-300 ${activeTab === item.id ? "text-white" : "group-hover:text-[#1A365D]"}`}>
-                    {item.icon}
-                  </span>
-                  <span className="font-semibold text-[15px]">{item.label}</span>
-                  {activeTab === item.id && (
-                    <div className="absolute end-4 w-1.5 h-1.5 bg-white rounded-full"></div>
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                title={sidebarCollapsed ? item.label : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600 font-semibold"
+                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                }`}
+              >
+                <Icon size={18} className={isActive ? "text-blue-600" : "text-gray-400"} />
+                {!sidebarCollapsed && <span>{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Upgrade card */}
+        {!sidebarCollapsed && userProfile?.role === "user" && !userProfile?.upgradeRequested && (
+          <div className="mx-3 mb-3 p-3.5 bg-blue-50 rounded-xl border border-blue-100">
+            <p className="text-blue-700 font-semibold text-xs mb-1">كن مدرباً</p>
+            <p className="text-blue-500 text-[10px] mb-2.5">شارك معرفتك مع العالم</p>
+            <Button onClick={handleRequestUpgrade} size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg h-8 text-xs font-semibold">
+              <PlusCircle size={14} className="me-1" /> طلب ترقية
+            </Button>
+          </div>
+        )}
+
+        {/* Logout */}
+        <div className="p-3 border-t border-gray-50">
+          <button
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-2.5 text-gray-400 hover:text-red-500 transition px-3 py-2 rounded-xl hover:bg-red-50 text-sm ${sidebarCollapsed ? 'justify-center' : ''}`}
+          >
+            <LogOut size={17} />
+            {!sidebarCollapsed && <span className="font-medium">خروج</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+          <div>
+            <p className="text-xs text-gray-400">
+              {t('dashboard.welcomeAdmin') || `مرحباً ${userProfile?.name?.split(' ')[0] || ''} 👋`}
+            </p>
+            <h2 className="text-xl font-bold text-gray-800">
+              {menuItems.find(m => m.id === activeTab)?.label}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <ChatButton variant="support" className="hidden sm:flex" />
+            <NotificationBell onViewAll={() => setActiveTab('notifications')} />
+            <div className="flex items-center gap-2.5 ps-3 border-s border-gray-100">
+              <Avatar className="w-9 h-9 ring-2 ring-gray-100">
+                <AvatarImage src={getImageUrl(userProfile?.avatar)} />
+                <AvatarFallback className="bg-blue-600 text-white font-semibold text-sm">{userProfile?.name?.charAt(0) || "U"}</AvatarFallback>
+              </Avatar>
+              <div className="hidden md:block">
+                <p className="text-sm font-semibold text-gray-800 leading-tight">{userProfile?.name || "Student"}</p>
+                <p className="text-[10px] text-gray-400">{userProfile?.role === 'user' ? 'طالب' : userProfile?.role}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="animate-in fade-in duration-300">
+
+            {/* ===== OVERVIEW ===== */}
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: "كورساتي", value: purchasedProducts.length, icon: BookOpen, color: "blue", bg: "bg-blue-50", iconColor: "text-blue-500" },
+                    { label: "معدل التقدم", value: `${avgProgress}%`, icon: TrendingUp, color: "emerald", bg: "bg-emerald-50", iconColor: "text-emerald-500" },
+                    { label: "مكتملة", value: completedCourses, icon: Award, color: "purple", bg: "bg-purple-50", iconColor: "text-purple-500" },
+                    { label: "الاختبارات", value: quizResults.length, icon: GraduationCap, color: "amber", bg: "bg-amber-50", iconColor: "text-amber-500" },
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 hover:border-gray-200 transition">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center`}>
+                          <stat.icon size={20} className={stat.iconColor} />
+                        </div>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Current courses */}
+                <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-800">متابعة التعلم</h3>
+                    <button onClick={() => setActiveTab("purchased")} className="text-blue-600 text-xs font-medium hover:text-blue-700">
+                      عرض الكل
+                    </button>
+                  </div>
+                  {purchasedProducts.length > 0 ? (
+                    <div className="grid gap-3">
+                      {purchasedProducts.slice(0, 3).map((product) => {
+                        const progress = allProgress.find(p => p.product?._id === product._id);
+                        const pct = progress?.completionPercentage || 0;
+                        return (
+                          <div
+                            key={product._id}
+                            onClick={() => navigate(`/course/${product._id}`)}
+                            className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition group"
+                          >
+                            <img
+                              src={resolveProductImage(product.imageCover)}
+                              alt={product.title}
+                              className="w-16 h-12 rounded-lg object-cover border border-gray-100"
+                              onError={(e) => e.currentTarget.src = "/placeholder-course.png"}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 line-clamp-1 group-hover:text-blue-600 transition">{product.title}</p>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }}></div>
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-medium">{pct}%</span>
+                              </div>
+                            </div>
+                            <Play size={16} className="text-gray-300 group-hover:text-blue-500 transition shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <Library size={40} className="mx-auto text-gray-200 mb-3" />
+                      <p className="text-sm text-gray-400">لم تشترك في أي كورس بعد</p>
+                      <Button onClick={() => setActiveTab("available")} variant="outline" size="sm" className="mt-3 rounded-xl text-xs">
+                        استكشف الكورسات
+                      </Button>
+                    </div>
                   )}
-                </button>
-              ))}
-            </nav>
+                </div>
 
-            {userProfile?.role === "user" && !userProfile?.upgradeRequested && (
-              <div className="mt-8 p-5 bg-[#EBF8FF] rounded-[24px] border border-[#BEE3F8]">
-                <h4 className="text-[#2C5282] font-bold text-sm mb-2">{t('dashboard.becomeInstructor')}</h4>
-                <p className="text-[#4299E1] text-[11px] mb-4">Start sharing your knowledge with the world.</p>
-                <Button
-                  onClick={handleRequestUpgrade}
-                  className="w-full bg-[#3182CE] hover:bg-[#2B6CB0] text-white rounded-xl py-2 flex items-center justify-center gap-2 font-bold shadow-md shadow-[#3182CE]/20 transition-all active:scale-95 text-xs"
-                >
-                  <PlusCircle size={16} />
-                  <span>{t('common.save')}</span>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: "بث مباشر", icon: Video, color: "text-red-500", bg: "bg-red-50", action: () => navigate('/live') },
+                    { label: "المساعد الذكي", icon: Sparkles, color: "text-purple-500", bg: "bg-purple-50", action: () => setActiveTab('ai-chat') },
+                    { label: "الرسائل", icon: MessageCircle, color: "text-blue-500", bg: "bg-blue-50", action: () => setActiveTab('chat') },
+                    { label: "الإنجازات", icon: Trophy, color: "text-amber-500", bg: "bg-amber-50", action: () => setActiveTab('gamification') },
+                  ].map((item, i) => (
+                    <button key={i} onClick={item.action} className="bg-white rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition text-center group">
+                      <div className={`w-10 h-10 ${item.bg} rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform`}>
+                        <item.icon size={20} className={item.color} />
+                      </div>
+                      <p className="text-xs font-medium text-gray-600">{item.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ===== GAMIFICATION ===== */}
+            {activeTab === "gamification" && (
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2 space-y-6">
+                  <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                    <GamificationDashboard stats={dashboardStats} />
+                  </div>
+                  <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                    <DailyChallenges />
+                  </div>
+                  <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                    <MyBadges />
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 h-fit">
+                  <Leaderboard />
+                </div>
+              </div>
+            )}
+
+            {/* ===== PURCHASED ===== */}
+            {activeTab === "purchased" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {purchasedProducts.length > 0 ? purchasedProducts.map((product) => (
+                  <div key={product._id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+                    <div className="relative h-44 overflow-hidden">
+                      <img
+                        src={resolveProductImage(product.imageCover)}
+                        alt={product.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => e.currentTarget.src = "/placeholder-course.png"}
+                      />
+                      <Badge className="absolute top-3 start-3 bg-emerald-500 text-white border-none text-[10px]">
+                        مشترك
+                      </Badge>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-gray-800 line-clamp-1 mb-1">{product.title}</h3>
+                      <p className="text-gray-400 text-xs line-clamp-2 mb-4 leading-relaxed">
+                        {product.description || "تابع تعلمك الآن"}
+                      </p>
+                      <Button
+                        className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 text-sm gap-1.5"
+                        onClick={() => navigate(`/course/${product._id}`)}
+                      >
+                        <Play size={15} /> متابعة
+                      </Button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="col-span-full py-20 text-center">
+                    <Library size={48} className="mx-auto text-gray-200 mb-3" />
+                    <p className="text-gray-400 font-medium">لم تشترك في أي كورس بعد</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ===== LIVE ===== */}
+            {activeTab === "live" && (
+              <div className="bg-white rounded-2xl p-8 border border-gray-100 text-center">
+                <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Video size={32} className="text-red-500" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">المحاضرات المباشرة</h3>
+                <p className="text-gray-400 text-sm mb-5">انضم للمحاضرات التفاعلية مع مدربيك</p>
+                <Button className="bg-red-500 hover:bg-red-600 rounded-xl h-10 px-6 font-semibold text-sm" onClick={() => navigate('/live')}>
+                  عرض المحاضرات المباشرة
                 </Button>
               </div>
             )}
-          </div>
 
-          <div className="mt-auto p-8 border-t border-white/30">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-between group text-[#718096] hover:text-[#E53E3E] transition-all p-3 rounded-xl hover:bg-red-50/50"
-            >
-              <div className="flex items-center gap-3">
-                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
-                <span className="font-bold">{t('dashboard.logout')}</span>
-              </div>
-              <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-all" />
-            </button>
-          </div>
-        </aside>
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white/10">
-
-          {/* Header */}
-          <header className="flex items-center justify-between ps-10 pe-12 py-8 bg-white/20 backdrop-blur-md border-b border-white/30">
-            <div className="space-y-1">
-              <h4 className="text-[#3182ce] text-sm font-medium">
-                {t('dashboard.welcomeAdmin') || `Welcome back, ${userProfile?.name?.split(' ')[0]} 👋`}
-              </h4>
-              <h2 className="text-3xl font-extrabold text-[#2D3748] tracking-tight">
-                {menuItems.find(m => m.id === activeTab)?.label}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-6">
-              {/* Search Mockup */}
-              <div className="hidden sm:flex items-center bg-white/40 backdrop-blur-md rounded-2xl px-4 py-2 border border-white/50 shadow-inner group transition-all focus-within:ring-2 focus-within:ring-[#3182ce]/30">
-                <SearchIcon size={18} className="text-[#718096] group-focus-within:text-[#3182ce]" />
-                <input
-                  type="text"
-                  placeholder={t('dashboard.searchPlaceholder')}
-                  className="bg-transparent border-none outline-none ps-3 text-sm text-[#4A5568] placeholder-[#A0AEC0] w-48"
-                />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <ChatButton variant="support" className="hidden sm:flex" />
-
-                <NotificationBell onViewAll={() => setActiveTab('notifications')} />
-
-                <div className="flex items-center gap-3 ps-3 border-s border-white/40">
-                  <Avatar className="w-11 h-11 ring-2 ring-white ring-offset-2 ring-offset-[#dbe9f4] shadow-md border-none cursor-pointer transition-transform hover:scale-105 active:scale-95">
-                    <AvatarImage src={getImageUrl(userProfile?.avatar)} />
-                    <AvatarFallback className="bg-[#1A365D] text-white font-bold">{userProfile?.name?.charAt(0) || "U"}</AvatarFallback>
-                  </Avatar>
-                  <div className="hidden md:block">
-                    <p className="text-sm font-extrabold text-[#2D3748] leading-tight">{userProfile?.name || "Student"}</p>
-                    <p className="text-[11px] font-semibold text-[#718096] uppercase tracking-wider">{userProfile?.role || "Student"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Content Body */}
-          <main className="flex-1 overflow-y-auto ps-10 pe-12 py-10 custom-scrollbar">
-
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-              {activeTab === "gamification" && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                  <div className="xl:col-span-2 space-y-8">
-                    <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03]">
-                      <GamificationDashboard stats={dashboardStats} />
-                    </div>
-                    <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03]">
-                      <DailyChallenges />
-                    </div>
-                    <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03]">
-                      <MyBadges />
-                    </div>
-                  </div>
-                  <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-2 border border-white/50 shadow-xl shadow-black/[0.03] h-fit">
-                    <Leaderboard />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "purchased" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {purchasedProducts.length > 0 ? purchasedProducts.map((product) => (
-                    <Card key={product._id} className="group border border-white/50 bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                      <div className="relative h-56 overflow-hidden">
-                        <img
-                          src={getImageUrl(product.imageCover)}
-                          alt={product.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <Badge className="absolute top-4 start-4 bg-white/90 backdrop-blur text-[#2D3748] border-none font-bold">
-                          {t('dashboard.completed') || 'Enrolled'}
-                        </Badge>
+            {/* ===== AVAILABLE ===== */}
+            {activeTab === "available" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {unpurchasedProducts.map((product) => (
+                  <div key={product._id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+                    <div className="relative h-44 overflow-hidden">
+                      <img
+                        src={resolveProductImage(product.imageCover)}
+                        alt={product.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => e.currentTarget.src = "/placeholder-course.png"}
+                      />
+                      <div className="absolute top-3 end-3 bg-white/90 backdrop-blur rounded-lg px-2 py-1 shadow-sm">
+                        <span className="text-emerald-600 font-bold text-sm">${product.price}</span>
                       </div>
-                      <CardContent className="p-8">
-                        <h3 className="font-extrabold text-xl text-[#2D3748] mb-3 line-clamp-1">{product.title}</h3>
-                        <p className="text-[#718096] text-sm mb-6 line-clamp-2 leading-relaxed">
-                          {product.description || t('dashboard.keepLearning')}
-                        </p>
-                        <Button
-                          className="w-full rounded-[18px] bg-[#3182CE] hover:bg-[#2B6CB0] text-white font-bold h-12 shadow-lg shadow-[#3182CE]/20 transition-all active:scale-95"
-                          onClick={() => navigate(`/course/${product._id}`)}
-                        >
-                          {t('common.view')}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )) : (
-                    <div className="col-span-full py-20 text-center">
-                      <Library size={64} className="mx-auto text-white/30 mb-4" />
-                      <p className="text-[#718096] font-bold">{t('dashboard.noCoursesFound') || 'No courses purchased yet'}</p>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === "live" && (
-                <div className="space-y-8">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                      <Video className="text-red-500" />
-                      المحاضرات المباشرة
-                    </h2>
+                    <div className="p-4">
+                      <h3 className="font-bold text-gray-800 line-clamp-1 mb-1">{product.title}</h3>
+                      <p className="text-gray-400 text-xs line-clamp-2 mb-4 leading-relaxed">
+                        {product.description || "اكتشف هذا الكورس"}
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold h-10 text-sm"
+                        onClick={() => navigate(`/course-details/${product._id}`)}
+                      >
+                        عرض التفاصيل
+                      </Button>
+                    </div>
                   </div>
-                  {/* Since we have a dedicated page for live streams, we can either link to it or embed a list */}
-                  <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 text-center">
-                    <Video size={48} className="mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-xl font-bold mb-4 text-gray-700">شاهد المحاضرات المباشرة الآن</h3>
-                    <p className="text-gray-500 mb-6">انضم للمحاضرات التفاعلية مع مدربيك المفضلين</p>
-                    <Button
-                      className="bg-red-500 hover:bg-red-600 rounded-2xl h-12 px-8 font-bold"
-                      onClick={() => navigate('/live')}
-                    >
-                      استعراض جميع المحاضرات المباشرة
-                    </Button>
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
+            )}
 
-              {activeTab === "available" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {unpurchasedProducts.map((product) => (
-                    <Card key={product._id} className="group border border-white/50 bg-white/40 backdrop-blur-md rounded-[32px] overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                      <div className="relative h-56 overflow-hidden">
-                        <img
-                          src={getImageUrl(product.imageCover)}
-                          alt={product.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute top-4 end-4 bg-white/95 backdrop-blur rounded-[14px] px-3 py-1.5 shadow-lg border border-white/50">
-                          <span className="text-[#2F855A] font-extrabold text-lg">${product.price}</span>
-                        </div>
-                      </div>
-                      <CardContent className="p-8">
-                        <h3 className="font-extrabold text-xl text-[#2D3748] mb-3 line-clamp-1">{product.title}</h3>
-                        <p className="text-[#718096] text-sm mb-6 line-clamp-2 leading-relaxed italic opacity-80">
-                          {product.description || t('dashboard.keepLearning')}
-                        </p>
-                        <Button
-                          className="w-full rounded-[18px] bg-[#1A365D] hover:bg-[#2A4365] text-white font-bold h-12 shadow-lg shadow-[#1A365D]/20 transition-all active:scale-95"
-                          onClick={() => navigate(`/course-details/${product._id}`)}
-                        >
-                          {t('common.view')}
-                        </Button>
-                      </CardContent>
-                    </Card>
+            {/* ===== PROGRESS ===== */}
+            {activeTab === "progress" && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl p-5 border border-gray-100">
+                  <ProgressOverview
+                    totalCourses={allProgress.length}
+                    completedCourses={completedCourses}
+                    totalLessons={allProgress.reduce((acc, p) => acc + (p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.length, 0) || 0), 0)}
+                    completedLessons={allProgress.reduce((acc, p) => acc + (p.completedLessons?.length || 0), 0)}
+                    totalMinutes={allProgress.reduce((acc, p) => acc + (p.timeSpent || 0), 0)}
+                    averageProgress={avgProgress}
+                  />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {allProgress.map((p) => (
+                    <div key={p._id} className="bg-white rounded-2xl p-4 border border-gray-100 hover:border-gray-200 transition">
+                      <CourseProgress
+                        courseId={p.product?._id}
+                        courseTitle={p.product?.title || "Course"}
+                        courseImage={resolveProductImage(p.product?.imageCover)}
+                        completedLessons={p.completedLessons?.length || 0}
+                        totalLessons={p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.length, 0) || 0}
+                        totalMinutes={p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.reduce((sl: number, l: any) => sl + (l.duration || 0), 0), 0) || 0}
+                        completedMinutes={p.timeSpent || 0}
+                      />
+                    </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {activeTab === "progress" && (
-                <div className="grid grid-cols-1 gap-8">
-                  <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-6 border border-white/50 shadow-xl shadow-black/[0.03]">
-                    <ProgressOverview
-                      totalCourses={allProgress.length}
-                      completedCourses={allProgress.filter(p => p.isCompleted).length}
-                      totalLessons={allProgress.reduce((acc, p) => acc + (p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.length, 0) || 0), 0)}
-                      completedLessons={allProgress.reduce((acc, p) => acc + (p.completedLessons?.length || 0), 0)}
-                      totalMinutes={allProgress.reduce((acc, p) => acc + (p.timeSpent || 0), 0)}
-                      averageProgress={allProgress.length > 0 ? Math.round(allProgress.reduce((acc, p) => acc + (p.completionPercentage || 0), 0) / allProgress.length) : 0}
-                    />
-                  </div>
+            {/* ===== QUIZZES ===== */}
+            {activeTab === "quizzes" && (
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <QuizResults results={quizResults} loading={false} />
+              </div>
+            )}
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {allProgress.map((p) => (
-                      <div key={p._id} className="bg-white/40 backdrop-blur-md rounded-[32px] p-4 border border-white/50 shadow-lg shadow-black/[0.02] hover:bg-white/60 transition-colors">
-                        <CourseProgress
-                          courseId={p.product?._id}
-                          courseTitle={p.product?.title || "Course"}
-                          courseImage={getImageUrl(p.product?.imageCover)}
-                          completedLessons={p.completedLessons?.length || 0}
-                          totalLessons={p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.length, 0) || 0}
-                          totalMinutes={p.product?.curriculum?.reduce((s: number, c: any) => s + c.lectures.reduce((sl: number, l: any) => sl + (l.duration || 0), 0), 0) || 0}
-                          completedMinutes={p.timeSpent || 0}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* ===== ASSIGNMENTS ===== */}
+            {activeTab === "assignments" && (
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <AssignmentResults results={assignmentResults} loading={false} />
+              </div>
+            )}
 
-              {activeTab === "quizzes" && (
-                <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 shadow-xl shadow-black/[0.03]">
-                  <QuizResults results={quizResults} loading={false} />
-                </div>
-              )}
+            {/* ===== PROFILE ===== */}
+            {activeTab === "profile" && (
+              <ProfileSettings
+                user={userProfile}
+                token={token || ''}
+                onUpdate={(updatedUser) => {
+                  setUserProfile(updatedUser);
+                  toast({ title: t('common.success') || 'تم التحديث بنجاح', className: "bg-green-500 text-white" });
+                }}
+              />
+            )}
 
-              {activeTab === "assignments" && (
-                <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 shadow-xl shadow-black/[0.03]">
-                  <AssignmentResults results={assignmentResults} loading={false} />
-                </div>
-              )}
+            {/* ===== CHAT ===== */}
+            {activeTab === "chat" && (
+              <div className="h-[calc(100vh-180px)] rounded-2xl overflow-hidden border border-gray-100">
+                <ChatDashboardWidget variant="full" />
+              </div>
+            )}
 
-              {activeTab === "profile" && (
-                <ProfileSettings
-                  user={userProfile}
-                  token={token || ''}
-                  onUpdate={(updatedUser) => {
-                    setUserProfile(updatedUser);
-                    toast({ title: t('common.success') || 'Profile updated successfully', className: "bg-green-500 text-white" });
-                  }}
-                />
-              )}
+            {/* ===== AI CHAT ===== */}
+            {activeTab === "ai-chat" && (
+              <div className="h-[calc(100vh-180px)] rounded-2xl overflow-hidden border border-gray-100">
+                <StudentAiChat />
+              </div>
+            )}
 
-              {activeTab === "chat" && (
-                <div className="h-[calc(100vh-140px)] rounded-[32px] overflow-hidden shadow-2xl">
-                  <ChatDashboardWidget variant="full" />
-                </div>
-              )}
+            {/* ===== NOTIFICATIONS ===== */}
+            {activeTab === "notifications" && (
+              <div className="bg-white rounded-2xl p-6 border border-gray-100">
+                <UserNotifications />
+              </div>
+            )}
 
-              {activeTab === "ai-chat" && (
-                <div className="h-[calc(100vh-140px)] rounded-[32px] overflow-hidden shadow-2xl">
-                  <StudentAiChat />
-                </div>
-              )}
-
-              {activeTab === "notifications" && (
-                <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-8 border border-white/50 shadow-xl shadow-black/[0.03]">
-                  <UserNotifications />
-                </div>
-              )}
-            </div>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
-
-      {/* Decorative Floating Elements (optional, context aware) */}
-      <div className="absolute top-[-100px] start-[-100px] w-80 h-80 bg-[#BEE3F8]/30 blur-[100px] rounded-full -z-10"></div>
-      <div className="absolute bottom-[-100px] end-[-100px] w-96 h-96 bg-[#FED7E2]/20 blur-[100px] rounded-full -z-10"></div>
     </div>
   );
 };

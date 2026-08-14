@@ -1,12 +1,13 @@
-﻿// mangerDashboard.tsx - مع مساحة للـ Navbar في الأعلى
+// mangerDashboard.tsx - مع مساحة للـ Navbar في الأعلى
 
 import { useEffect, useState } from "react";
 import {
   BarChart, LogOut, LayoutDashboard, GraduationCap, ClipboardList,
-  Sparkles, Image, FileVideo, Video, PlusCircle, Search, Bell, Eye,
+  Video, PlusCircle, Search, Bell, Eye,
   ChevronDown, ChevronUp, Users, MessageSquare, Calendar,
   Heart, Share2, MoreHorizontal, TrendingUp, DollarSign,
-  BookOpen, Award, Settings, Edit, Trash2, MessageCircle
+  BookOpen, Award, Settings, Edit, Trash2, MessageCircle,
+  ExternalLink, Key, Copy, RefreshCw, Sparkles
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CommunityContent } from "@/pages/CommunityPage";
@@ -23,10 +24,7 @@ import { useTranslation } from "react-i18next";
 import InstructorStats from "@/components/instructor/course-management/InstructorStats";
 import PendingGrading from "@/components/instructor/course-management/PendingGrading";
 import CourseAnalytics from "@/components/instructor/course-management/CourseAnalytics";
-import AiCourseOutlineGenerator from "@/components/instructor/course-management/AiCourseOutlineGenerator";
-import AIPhotopeaStudio from "@/components/instructor/photopea/AIPhotopeaStudio";
 import InstructorWallet from "@/components/instructor/course-management/InstructorWallet";
-import VideoTools from "@/components/instructor/video-editor/VideoTools";
 import UdemyLinkModal from "@/components/instructor/shared/UdemyLinkModal";
 import LiveStreamManager from "@/components/admin/LiveStreamManager";
 import { AddProductModal } from '@/components/admin/AddProductModal';
@@ -38,7 +36,7 @@ import ChatDashboardWidget from "@/components/chat/ChatDashboardWidget";
 import ProfileSettings from "@/components/dashboard/ProfileSettings";
 import { UserNotifications } from "@/components/dashboard/UserNotifications";
 import NotificationBell from "@/components/dashboard/NotificationBell";
-import CourseManagementAI from "@/components/instructor/course-management/CourseManagementAI";
+
 
 interface Course {
   _id: string;
@@ -181,8 +179,12 @@ export default function InstructorDashboard() {
       if (res.data?.data?.students) {
         setStudents(res.data.data.students);
       }
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        console.warn("Insufficient permissions for instructor dashboard. Your role may not have access.");
+      } else {
+        console.error("Error fetching dashboard stats:", error);
+      }
     } finally {
       setLoadingStats(false);
     }
@@ -196,8 +198,12 @@ export default function InstructorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setPendingGrading(res.data?.data || res.data || []);
-    } catch (error) {
-      console.error("Error fetching pending grading:", error);
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        console.warn("Insufficient permissions for pending grading.");
+      } else {
+        console.error("Error fetching pending grading:", error);
+      }
     } finally {
       setLoadingPending(false);
     }
@@ -315,8 +321,11 @@ export default function InstructorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUdemyCourses(res.data?.data || []);
-    } catch (err) {
-      console.error("Failed to fetch Udemy courses", err);
+    } catch (err: any) {
+      // Udemy integration not yet implemented on backend - fail silently
+      if (err.response?.status !== 403 && err.response?.status !== 404) {
+        console.error("Failed to fetch Udemy courses", err);
+      }
     } finally {
       setLoadingUdemy(false);
     }
@@ -328,7 +337,8 @@ export default function InstructorDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsUdemyLinked(res.data?.isLinked || false);
-    } catch (err) {
+    } catch {
+      // Udemy integration not yet implemented on backend - fail silently
       setIsUdemyLinked(false);
     }
   };
@@ -437,9 +447,6 @@ export default function InstructorDashboard() {
     ...(isUdemyLinked ? [{ id: "udemy", label: t('dashboard.udemyCourses'), icon: <Award size={20} /> }] : []),
     { id: "grading", label: t('dashboard.grading'), icon: <ClipboardList size={20} /> },
     { id: "wallet", label: t('dashboard.wallet') || 'المحفظة', icon: <DollarSign size={20} /> },
-    { id: "ai-assistant", label: t('dashboard.aiAssistant'), icon: <Sparkles size={20} /> },
-    { id: "photo-studio", label: t('dashboard.photoStudio') || 'استوديو الصور', icon: <Image size={20} /> },
-    { id: "video-tools", label: t('dashboard.videoTools'), icon: <FileVideo size={20} /> },
   ];
 
   const getCategoryName = (category: string | { name: string } | undefined): string => {
@@ -468,8 +475,7 @@ export default function InstructorDashboard() {
             { id: "analytics", icon: <BarChart size={20} /> },
             { id: "community", icon: <Users size={20} /> },
             { id: "grading", icon: <ClipboardList size={20} /> },
-            { id: "ai-assistant", icon: <Sparkles size={20} /> },
-            { id: "course-management-ai", icon: <Sparkles size={20} /> },
+
             { id: "settings", icon: <Settings size={20} /> }
           ].map((item) => (
             <button
@@ -542,6 +548,14 @@ export default function InstructorDashboard() {
 
             <div className="flex items-center gap-3">
 
+
+              <Button
+                onClick={() => window.open('http://localhost:5174/', '_blank')}
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-500/30"
+              >
+                <ExternalLink size={18} className="me-2" />
+                مختبر التصميم
+              </Button>
 
               <Button
                 onClick={() => setShowAddProductModal(true)}
@@ -636,7 +650,7 @@ export default function InstructorDashboard() {
           </aside>
 
           {/* Main Content with offset for sidebars */}
-          <main className={`flex-1 flex flex-col bg-gray-50 ms-52 ${activeTab === 'video-tools' || activeTab === 'photo-studio' ? 'p-0 overflow-hidden' : 'p-4 overflow-y-auto'}`}>
+          <main className={`flex-1 flex flex-col bg-gray-50 ms-52 p-4 overflow-y-auto`}>
             {activeTab === "overview" && (
               <div className="space-y-6">
                 <div className="flex items-center gap-2 mb-6">
@@ -911,33 +925,7 @@ export default function InstructorDashboard() {
             )}
 
             {activeTab === "grading" && <PendingGrading items={pendingGrading} loading={loadingPending} onGrade={handleGrade} />}
-            {activeTab === "ai-assistant" && <AiCourseOutlineGenerator />}
-            {activeTab === "course-management-ai" && (
-              <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl bg-white">
-                <CourseManagementAI
-                  courses={courses}
-                  students={students}
-                  token={token}
-                  onAction={(action, data) => {
-                    if (action === 'refresh') {
-                      fetchCourses();
-                      fetchStudents();
-                    }
-                  }}
-                />
-              </div>
-            )}
-            {/* Persist Photo Studio State */}
-            <div style={{ display: activeTab === "photo-studio" ? 'block' : 'none' }}>
-              {(visitedTabs.has("photo-studio") || activeTab === "photo-studio") && <AIPhotopeaStudio />}
-            </div>
 
-            {/* Persist Video Tools State */}
-            <div className="h-full flex flex-col" style={{ display: activeTab === "video-tools" ? 'flex' : 'none' }}>
-              <div className="flex-1 min-h-[600px] h-full">
-                {(visitedTabs.has("video-tools") || activeTab === "video-tools") && <VideoTools />}
-              </div>
-            </div>
 
             {/* Persist Chat State */}
             <div style={{ display: activeTab === "chat" ? 'block' : 'none' }} className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl">
@@ -1017,14 +1005,89 @@ export default function InstructorDashboard() {
             )}
 
             {activeTab === "settings" && (
-              <ProfileSettings
-                user={dashboardStats?.instructor || { name: 'Instructor' }}
-                token={token || ''}
-                onUpdate={(updated) => {
-                  fetchDashboardStats();
-                  toast({ title: "Profile Updated" });
-                }}
-              />
+              <div className="space-y-6">
+                <ProfileSettings
+                  user={dashboardStats?.instructor || { name: 'Instructor' }}
+                  token={token || ''}
+                  onUpdate={(updated) => {
+                    fetchDashboardStats();
+                    toast({ title: "Profile Updated" });
+                  }}
+                />
+
+                {/* API Key Section for Lab */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                      <Key size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">مفتاح API - مختبر التصميم</h3>
+                      <p className="text-sm text-gray-500">مفتاح API الخاص بك للربط مع مختبر التصميم AVinar Lab</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 font-mono text-sm text-gray-700 select-all overflow-x-auto">
+                        {dashboardStats?.instructor?.apiKey || 'لم يتم إنشاء مفتاح API بعد'}
+                      </div>
+                      {dashboardStats?.instructor?.apiKey && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            navigator.clipboard.writeText(dashboardStats?.instructor?.apiKey || '');
+                            toast({ title: 'تم النسخ', description: 'تم نسخ مفتاح API بنجاح' });
+                          }}
+                          title="نسخ"
+                        >
+                          <Copy size={16} />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const res = await axios.post(
+                              `${API_BASE_URL}/api/v1/instructor/generate-api-key`,
+                              {},
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            fetchDashboardStats();
+                            toast({ title: 'تم بنجاح', description: 'تم إنشاء مفتاح API جديد' });
+                          } catch (err) {
+                            toast({ title: 'خطأ', description: 'فشل في إنشاء مفتاح API', variant: 'destructive' });
+                          }
+                        }}
+                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                      >
+                        {dashboardStats?.instructor?.apiKey ? (
+                          <><RefreshCw size={16} className="me-2" /> إعادة إنشاء المفتاح</>
+                        ) : (
+                          <><Key size={16} className="me-2" /> إنشاء مفتاح API</>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open('http://localhost:5174/', '_blank')}
+                      >
+                        <ExternalLink size={16} className="me-2" />
+                        فتح مختبر التصميم
+                      </Button>
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <p className="text-sm text-amber-800">
+                        <strong>⚠️ تنبيه:</strong> مفتاح API يُستخدم لربط حسابك مع مختبر التصميم. لا تشارك هذا المفتاح مع أي شخص. إعادة إنشاء المفتاح ستُبطل المفتاح السابق.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </main>
         </div>

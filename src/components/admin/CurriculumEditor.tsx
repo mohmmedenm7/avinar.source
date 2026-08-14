@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronUp, Video, FileText, Clock, Link as LinkIcon, Eye, Upload } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, Video, FileText, Clock, Link as LinkIcon, Eye, Upload, Loader2, CheckCircle2, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { API_BASE_URL } from '@/config/env';
 
 export interface Lecture {
     title: string;
@@ -28,12 +29,22 @@ interface CurriculumEditorProps {
     setCurriculum: (sections: Section[]) => void;
 }
 
+// حالة رفع الفيديو
+interface UploadState {
+    uploading: boolean;
+    progress: number;
+    error: string | null;
+}
+
 export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     whatWillYouLearn,
     setWhatWillYouLearn,
     curriculum,
     setCurriculum,
 }) => {
+    // تتبع حالة الرفع لكل محاضرة
+    const [uploadStates, setUploadStates] = useState<Record<string, UploadState>>({});
+
     // --- What Will You Learn Logic ---
     const handleAddLearnItem = () => {
         setWhatWillYouLearn([...whatWillYouLearn, ""]);
@@ -103,6 +114,86 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
         setCurriculum(newSections);
     };
 
+    // رفع فيديو محاضرة إلى R2
+    const handleVideoUpload = async (
+        sectionIndex: number,
+        lectureIndex: number,
+        file: File
+    ) => {
+        const uploadKey = `${sectionIndex}-${lectureIndex}`;
+        const token = localStorage.getItem("token");
+
+        setUploadStates(prev => ({
+            ...prev,
+            [uploadKey]: { uploading: true, progress: 0, error: null }
+        }));
+
+        try {
+            const formData = new FormData();
+            formData.append("video", file);
+            formData.append("folder", "lectures");
+
+            const xhr = new XMLHttpRequest();
+
+            // تتبع تقدم الرفع
+            xhr.upload.addEventListener("progress", (event) => {
+                if (event.lengthComputable) {
+                    const progress = Math.round((event.loaded / event.total) * 100);
+                    setUploadStates(prev => ({
+                        ...prev,
+                        [uploadKey]: { ...prev[uploadKey], progress }
+                    }));
+                }
+            });
+
+            // Promise wrapper for XMLHttpRequest
+            const result = await new Promise<{ url: string }>((resolve, reject) => {
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve({ url: response.data.url });
+                    } else {
+                        try {
+                            const errResponse = JSON.parse(xhr.responseText);
+                            reject(new Error(errResponse.message || `Upload failed: ${xhr.status}`));
+                        } catch {
+                            reject(new Error(`Upload failed: ${xhr.status}`));
+                        }
+                    }
+                };
+                xhr.onerror = () => reject(new Error("Network error during upload"));
+
+                xhr.open("POST", `${API_BASE_URL}/api/v1/videos/upload`);
+                xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+                xhr.send(formData);
+            });
+
+            // حفظ URL الفيديو
+            handleLectureChange(sectionIndex, lectureIndex, "video", result.url);
+
+            setUploadStates(prev => ({
+                ...prev,
+                [uploadKey]: { uploading: false, progress: 100, error: null }
+            }));
+
+            // مسح حالة الرفع بعد 3 ثواني
+            setTimeout(() => {
+                setUploadStates(prev => {
+                    const newState = { ...prev };
+                    delete newState[uploadKey];
+                    return newState;
+                });
+            }, 3000);
+
+        } catch (error: any) {
+            console.error("Video upload error:", error);
+            setUploadStates(prev => ({
+                ...prev,
+                [uploadKey]: { uploading: false, progress: 0, error: error.message || "فشل رفع الفيديو" }
+            }));
+        }
+    };
+
     return (
         <div className="space-y-8 text-right" dir="rtl">
             {/* What Will You Learn Section */}
@@ -164,123 +255,199 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
 
                             {/* Lectures List */}
                             <div className="space-y-4 pr-4 border-r-2 border-gray-200 mr-2">
-                                {section.lectures.map((lecture, lIndex) => (
-                                    <div key={lIndex} className="bg-white p-4 rounded border shadow-sm">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-3">
-                                                <h4 className="font-semibold text-sm text-gray-600">
-                                                    محاضرة {lIndex + 1}
-                                                </h4>
-                                                {lecture.isFree && (
-                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
-                                                        <Eye size={12} /> مجانية
-                                                    </span>
-                                                )}
+                                {section.lectures.map((lecture, lIndex) => {
+                                    const uploadKey = `${sIndex}-${lIndex}`;
+                                    const uploadState = uploadStates[uploadKey];
+
+                                    return (
+                                        <div key={lIndex} className="bg-white p-4 rounded border shadow-sm">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <h4 className="font-semibold text-sm text-gray-600">
+                                                        محاضرة {lIndex + 1}
+                                                    </h4>
+                                                    {lecture.isFree && (
+                                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                                                            <Eye size={12} /> مجانية
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={() => handleRemoveLecture(sIndex, lIndex)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" /> حذف
+                                                </Button>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                onClick={() => handleRemoveLecture(sIndex, lIndex)}
-                                            >
-                                                <Trash2 className="h-4 w-4" /> حذف
-                                            </Button>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs text-gray-500 mb-1 block">عنوان المحاضرة</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText className="h-4 w-4 text-gray-400" />
+                                                        <Input
+                                                            value={lecture.title}
+                                                            onChange={(e) =>
+                                                                handleLectureChange(sIndex, lIndex, "title", e.target.value)
+                                                            }
+                                                            placeholder="مثال: مقدمة في React"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-xs text-gray-500 mb-1 block">رابط فيديو خارجي (YouTube, Vimeo)</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <LinkIcon className="h-4 w-4 text-blue-400" />
+                                                        <Input
+                                                            value={lecture.videoUrl || ""}
+                                                            onChange={(e) =>
+                                                                handleLectureChange(sIndex, lIndex, "videoUrl", e.target.value)
+                                                            }
+                                                            placeholder="https://www.youtube.com/watch?v=..."
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* رفع فيديو إلى R2 */}
+                                                <div className="md:col-span-2">
+                                                    <label className="text-xs text-gray-500 mb-1 block">أو رفع فيديو مباشرة (يُخزن في السحابة)</label>
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <CloudUpload className="h-4 w-4 text-orange-500" />
+                                                            <input
+                                                                type="file"
+                                                                accept="video/*"
+                                                                className="hidden"
+                                                                id={`video-upload-${sIndex}-${lIndex}`}
+                                                                disabled={uploadState?.uploading}
+                                                                onChange={(e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) {
+                                                                        handleVideoUpload(sIndex, lIndex, file);
+                                                                    }
+                                                                    e.target.value = ''; // Reset input
+                                                                }}
+                                                            />
+                                                            <label
+                                                                htmlFor={`video-upload-${sIndex}-${lIndex}`}
+                                                                className={`flex-1 border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all ${
+                                                                    uploadState?.uploading
+                                                                        ? 'border-orange-300 bg-orange-50 cursor-not-allowed'
+                                                                        : lecture.video
+                                                                            ? 'border-green-300 bg-green-50 hover:border-green-400'
+                                                                            : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                                                                }`}
+                                                            >
+                                                                {uploadState?.uploading ? (
+                                                                    <div className="flex flex-col items-center gap-1">
+                                                                        <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+                                                                        <span className="text-xs text-orange-600 font-medium">
+                                                                            جاري الرفع... {uploadState.progress}%
+                                                                        </span>
+                                                                    </div>
+                                                                ) : lecture.video ? (
+                                                                    <div className="flex items-center justify-center gap-2">
+                                                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                                                        <span className="text-xs text-green-700 font-medium truncate max-w-xs">
+                                                                            ✓ تم رفع الفيديو بنجاح
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center justify-center gap-2">
+                                                                        <Upload className="h-4 w-4 text-gray-400" />
+                                                                        <span className="text-xs text-gray-500">
+                                                                            اضغط لرفع فيديو (حد أقصى 500MB)
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </label>
+                                                        </div>
+
+                                                        {/* Progress bar */}
+                                                        {uploadState?.uploading && (
+                                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                                <div
+                                                                    className="bg-gradient-to-r from-orange-400 to-orange-600 h-2 rounded-full transition-all duration-300"
+                                                                    style={{ width: `${uploadState.progress}%` }}
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        {/* Error message */}
+                                                        {uploadState?.error && (
+                                                            <p className="text-xs text-red-500 mt-1">❌ {uploadState.error}</p>
+                                                        )}
+
+                                                        {/* عرض رابط الفيديو المرفوع */}
+                                                        {lecture.video && !uploadState?.uploading && (
+                                                            <Input
+                                                                value={lecture.video}
+                                                                onChange={(e) =>
+                                                                    handleLectureChange(sIndex, lIndex, "video", e.target.value)
+                                                                }
+                                                                placeholder="رابط الفيديو"
+                                                                className="text-xs"
+                                                                readOnly={lecture.video.startsWith('http')}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-xs text-gray-500 mb-1 block">المدة (دقائق)</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="h-4 w-4 text-gray-400" />
+                                                        <Input
+                                                            type="number"
+                                                            value={lecture.duration}
+                                                            onChange={(e) =>
+                                                                handleLectureChange(
+                                                                    sIndex,
+                                                                    lIndex,
+                                                                    "duration",
+                                                                    parseInt(e.target.value) || 0
+                                                                )
+                                                            }
+                                                            min={0}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="md:col-span-2">
+                                                    <label className="text-xs text-gray-500 mb-1 block">الوصف</label>
+                                                    <Textarea
+                                                        value={lecture.description}
+                                                        onChange={(e) =>
+                                                            handleLectureChange(sIndex, lIndex, "description", e.target.value)
+                                                        }
+                                                        placeholder="وصف مختصر لمحتوى المحاضرة..."
+                                                        rows={2}
+                                                    />
+                                                </div>
+
+                                                {/* Free Preview Toggle */}
+                                                <div className="md:col-span-2 flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <Eye className="h-4 w-4 text-blue-600" />
+                                                        <Label htmlFor={`free-${sIndex}-${lIndex}`} className="text-sm font-medium text-blue-800">
+                                                            محاضرة مجانية للمعاينة
+                                                        </Label>
+                                                    </div>
+                                                    <Switch
+                                                        id={`free-${sIndex}-${lIndex}`}
+                                                        checked={lecture.isFree || false}
+                                                        onCheckedChange={(checked) =>
+                                                            handleLectureChange(sIndex, lIndex, "isFree", checked)
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-xs text-gray-500 mb-1 block">عنوان المحاضرة</label>
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="h-4 w-4 text-gray-400" />
-                                                    <Input
-                                                        value={lecture.title}
-                                                        onChange={(e) =>
-                                                            handleLectureChange(sIndex, lIndex, "title", e.target.value)
-                                                        }
-                                                        placeholder="مثال: مقدمة في React"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs text-gray-500 mb-1 block">رابط فيديو خارجي (YouTube, Vimeo)</label>
-                                                <div className="flex items-center gap-2">
-                                                    <LinkIcon className="h-4 w-4 text-blue-400" />
-                                                    <Input
-                                                        value={lecture.videoUrl || ""}
-                                                        onChange={(e) =>
-                                                            handleLectureChange(sIndex, lIndex, "videoUrl", e.target.value)
-                                                        }
-                                                        placeholder="https://www.youtube.com/watch?v=..."
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs text-gray-500 mb-1 block">أو رابط فيديو مرفوع</label>
-                                                <div className="flex items-center gap-2">
-                                                    <Upload className="h-4 w-4 text-gray-400" />
-                                                    <Input
-                                                        value={lecture.video || ""}
-                                                        onChange={(e) =>
-                                                            handleLectureChange(sIndex, lIndex, "video", e.target.value)
-                                                        }
-                                                        placeholder="رابط الفيديو المباشر (مرفوع على الخادم)"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-xs text-gray-500 mb-1 block">المدة (دقائق)</label>
-                                                <div className="flex items-center gap-2">
-                                                    <Clock className="h-4 w-4 text-gray-400" />
-                                                    <Input
-                                                        type="number"
-                                                        value={lecture.duration}
-                                                        onChange={(e) =>
-                                                            handleLectureChange(
-                                                                sIndex,
-                                                                lIndex,
-                                                                "duration",
-                                                                parseInt(e.target.value) || 0
-                                                            )
-                                                        }
-                                                        min={0}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="md:col-span-2">
-                                                <label className="text-xs text-gray-500 mb-1 block">الوصف</label>
-                                                <Textarea
-                                                    value={lecture.description}
-                                                    onChange={(e) =>
-                                                        handleLectureChange(sIndex, lIndex, "description", e.target.value)
-                                                    }
-                                                    placeholder="وصف مختصر لمحتوى المحاضرة..."
-                                                    rows={2}
-                                                />
-                                            </div>
-
-                                            {/* Free Preview Toggle */}
-                                            <div className="md:col-span-2 flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <Eye className="h-4 w-4 text-blue-600" />
-                                                    <Label htmlFor={`free-${sIndex}-${lIndex}`} className="text-sm font-medium text-blue-800">
-                                                        محاضرة مجانية للمعاينة
-                                                    </Label>
-                                                </div>
-                                                <Switch
-                                                    id={`free-${sIndex}-${lIndex}`}
-                                                    checked={lecture.isFree || false}
-                                                    onCheckedChange={(checked) =>
-                                                        handleLectureChange(sIndex, lIndex, "isFree", checked)
-                                                    }
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 <Button
                                     variant="outline"
                                     size="sm"

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import axios from "axios";
 
@@ -26,6 +26,7 @@ import LiveStreamManager from "@/components/admin/LiveStreamManager";
 import { AddProductModal } from "@/components/admin/AddProductModal";
 import HeroBannerManager from "@/components/admin/HeroBannerManager";
 import CourseManagementAI from "@/components/instructor/course-management/CourseManagementAI";
+import { NotificationManager } from "@/components/admin/NotificationManager";
 
 // Icons
 import {
@@ -53,7 +54,13 @@ import {
     Building,
     Video,
     Image,
-    Sparkles
+    Sparkles,
+    ChevronDown,
+    ChevronRight,
+    Menu,
+    TrendingUp,
+    TrendingDown,
+    ArrowRight
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
@@ -152,6 +159,18 @@ const AdminDashboard = () => {
     // Filter states
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+
+    // Amazon-style sidebar states
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+        dashboard: true,
+        finance: true,
+        catalog: true,
+        operations: true,
+        people: true,
+        communication: false,
+        tools: false,
+    });
 
     useEffect(() => {
         if (activeTab !== 'chat') {
@@ -419,275 +438,496 @@ const AdminDashboard = () => {
         0
     );
 
-    const iconMap = {
-        user: <Users size={20} className="text-purple-600" />,
-        box: <Box size={20} className="text-orange-600" />,
-        "shopping-cart": <ShoppingCart size={20} className="text-blue-600" />,
-        "dollar-sign": <DollarSign size={20} className="text-green-600" />,
-        "shopping-bag": <ShoppingBag size={20} className="text-indigo-600" />,
+    // =============== Sidebar Groups (Amazon-style) ===============
+    const sidebarGroups = [
+        {
+            id: 'dashboard',
+            title: t('dashboard.dashboard') || 'Dashboard',
+            items: [
+                { id: "analytics", label: t('dashboard.analytics'), icon: <BarChart size={18} /> },
+            ]
+        },
+        {
+            id: 'finance',
+            title: t('dashboard.finance') || 'Finance',
+            items: [
+                { id: "withdrawals", label: t('dashboard.wallet') || 'المحفظة المالية', icon: <DollarSign size={18} /> },
+            ]
+        },
+        {
+            id: 'catalog',
+            title: t('dashboard.catalog') || 'Catalog',
+            items: [
+                { id: "products", label: t('dashboard.products'), icon: <Box size={18} /> },
+                { id: "categories", label: t('dashboard.categories'), icon: <Folder size={18} /> },
+                { id: "subcategories", label: t('dashboard.subCategories'), icon: <FolderTree size={18} /> },
+                { id: "coupons", label: t('dashboard.coupons'), icon: <Ticket size={18} /> },
+            ]
+        },
+        {
+            id: 'operations',
+            title: t('dashboard.operations') || 'Operations',
+            items: [
+                { id: "orders", label: t('dashboard.orders'), icon: <ShoppingBag size={18} /> },
+                { id: "training-centers", label: "Training Centers", icon: <Building size={18} /> },
+                { id: "livestreams", label: 'إدارة البث المباشر', icon: <Video size={18} /> },
+                { id: "hero-banners", label: 'إعلانات الصفحة الرئيسية', icon: <Image size={18} /> },
+            ]
+        },
+        {
+            id: 'people',
+            title: t('dashboard.people') || 'People',
+            items: [
+                { id: "users", label: t('dashboard.users'), icon: <Users size={18} /> },
+                { id: "allStudents", label: t('dashboard.allStudents'), icon: <Users size={18} /> },
+                { id: "allCourses", label: t('dashboard.allCourses'), icon: <Database size={18} /> },
+                { id: "requests", label: t('dashboard.instructorRequests'), icon: <GraduationCap size={18} /> },
+            ]
+        },
+        {
+            id: 'communication',
+            title: t('dashboard.communication') || 'Communication',
+            items: [
+                { id: "chat", label: t('dashboard.chat') || 'الرسائل والدعم', icon: <MessageCircle size={18} /> },
+                { id: "chat-admin", label: t('dashboard.chatAdmin') || 'إدارة الدردشة', icon: <Settings size={18} /> },
+                { id: "notifications", label: t('dashboard.notifications') || 'إدارة الإشعارات', icon: <Bell size={18} /> },
+                { id: "helpdesk", label: t('dashboard.helpdesk') || 'مركز الدعم الفني', icon: <Headphones size={18} />, isLink: true, href: '/admin/support' },
+            ]
+        },
+        {
+            id: 'tools',
+            title: t('dashboard.tools') || 'Tools',
+            items: [
+                { id: "gamification", label: t('dashboard.gamification') || "نظام الألعاب", icon: <Trophy size={18} /> },
+                { id: "course-management-ai", label: 'مساعد الكورسات AI', icon: <Sparkles size={18} /> },
+                { id: "settings", label: t('dashboard.profile') || 'الإعدادات', icon: <Settings size={18} /> },
+            ]
+        },
+    ];
+
+    const toggleGroup = (groupId: string) => {
+        setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
     };
 
-    const statsCards = [
-        { label: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: "dollar-sign", color: "bg-green-50", trend: "+12%" },
-        { label: "Platform Wallet", value: `$${dashboardStats?.finances?.platformTotal?.toFixed(2) || 0}`, icon: "shopping-cart", color: "bg-blue-50", trend: "70/30 Split" },
-        { label: "Orders", value: totalOrders, icon: "shopping-bag", color: "bg-purple-50", trend: "+8%" },
-        { label: "Users", value: totalUsers, icon: "user", color: "bg-yellow-50", trend: "+2%" }
-    ];
-
-    const menuItems = [
-        { id: "withdrawals", label: t('dashboard.wallet') || 'المحفظة المالية', icon: <DollarSign size={20} /> },
-        { id: "chat", label: t('dashboard.chat') || 'الرسائل والدعم', icon: <MessageCircle size={20} /> },
-        { id: "chat-admin", label: t('dashboard.chatAdmin') || 'إدارة الدردشة', icon: <Settings size={20} /> },
-        { id: "settings", label: t('dashboard.profile') || 'الإعدادات', icon: <Settings size={20} /> },
-        { id: "helpdesk", label: t('dashboard.helpdesk') || 'مركز الدعم الفني', icon: <Headphones size={20} />, isLink: true, href: '/admin/support' },
-        { id: "analytics", label: t('dashboard.analytics'), icon: <BarChart size={20} /> },
-        { id: "requests", label: t('dashboard.instructorRequests'), icon: <GraduationCap size={20} /> },
-        { id: "orders", label: t('dashboard.orders'), icon: <ShoppingBag size={20} /> },
-        { id: "products", label: t('dashboard.products'), icon: <Box size={20} /> },
-        { id: "users", label: t('dashboard.users'), icon: <Users size={20} /> },
-        { id: "categories", label: t('dashboard.categories'), icon: <Folder size={20} /> },
-        { id: "subcategories", label: t('dashboard.subCategories'), icon: <FolderTree size={20} /> },
-        { id: "training-centers", label: "Training Centers", icon: <Building size={20} /> },
-        { id: "coupons", label: t('dashboard.coupons'), icon: <Ticket size={20} /> },
-        { id: "gamification", label: t('dashboard.gamification') || "نظام الألعاب", icon: <Trophy size={20} /> },
-        { id: "notifications", label: t('dashboard.notifications') || "إدارة الإشعارات", icon: <Bell size={20} /> },
-        { id: "allStudents", label: t('dashboard.allStudents'), icon: <Users size={20} /> },
-        { id: "allCourses", label: t('dashboard.allCourses'), icon: <Database size={20} /> },
-        { id: "livestreams", label: 'إدارة البث المباشر', icon: <Video size={20} /> },
-        { id: "hero-banners", label: 'إعلانات الصفحة الرئيسية', icon: <Image size={20} /> },
-        { id: "course-management-ai", label: 'مساعد الكورسات AI', icon: <Sparkles size={20} /> },
-    ];
+    const getCurrentTabLabel = () => {
+        for (const group of sidebarGroups) {
+            const item = group.items.find((i: any) => i.id === activeTab);
+            if (item) return item.label;
+        }
+        return activeTab;
+    };
 
     const currentDir = i18n.language.startsWith("ar") ? "rtl" : "ltr";
+    const isRtl = currentDir === 'rtl';
 
     return (
-        <div className="flex h-screen bg-[#F4F2EE] font-sans overflow-hidden pt-24" dir={currentDir}>
-            {/* Sidebar */}
-            <aside className="w-[280px] bg-[#1a1c1e] text-gray-400 flex flex-col m-4 rounded-[30px] shadow-2xl overflow-hidden relative">
-                <div className="p-8 pb-4">
-                    <div className="flex items-center gap-3 mb-8 text-white">
-                        <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                            <span className="font-bold text-lg">P</span>
+        <div className="flex h-screen bg-[#EAEDED] font-sans overflow-hidden pt-24" dir={currentDir}>
+
+            {/* =================== SIDEBAR (Amazon Style) =================== */}
+            <aside
+                className={`${sidebarCollapsed ? 'w-[64px]' : 'w-[250px]'} bg-white ${isRtl ? 'border-l' : 'border-r'} border-gray-200 flex flex-col h-full transition-all duration-300 shrink-0 z-10`}
+                style={{ boxShadow: '2px 0 8px rgba(0,0,0,0.04)' }}
+            >
+                {/* Brand */}
+                <div className={`p-4 border-b border-gray-200 shrink-0 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
+                    <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+                        <div className="w-9 h-9 bg-gradient-to-br from-[#FF9900] to-[#FF6600] rounded-lg flex items-center justify-center shadow-sm shrink-0">
+                            <span className="text-white font-bold text-base">A</span>
                         </div>
-                        <h1 className="text-xl font-bold tracking-brand">{t('app.title')}</h1>
+                        {!sidebarCollapsed && (
+                            <div className="min-w-0">
+                                <h1 className="text-sm font-bold text-[#0F1111] truncate">{t('app.title')}</h1>
+                                <p className="text-[10px] text-gray-400 font-medium">Seller Central</p>
+                            </div>
+                        )}
                     </div>
-
-                    <button
-                        onClick={() => setShowAddProductModal(true)}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium transition-transform active:scale-95 shadow-lg shadow-orange-500/30 mb-8"
-                    >
-                        <PlusCircle size={20} />
-                        <span>{t('dashboard.createProject')}</span>
-                    </button>
-
-                    <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-2 custom-scrollbar">
-                        {menuItems.map((item: any) => (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    if (item.isLink && item.href) {
-                                        navigate(item.href);
-                                    } else {
-                                        setActiveTab(item.id);
-                                    }
-                                }}
-                                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 ${activeTab === item.id
-                                    ? "bg-white text-black shadow-lg font-semibold transform ltr:translate-x-1 rtl:-translate-x-1"
-                                    : "hover:bg-white/5 hover:text-gray-200"
-                                    }`}
-                            >
-                                <span className={activeTab === item.id ? "text-orange-500" : ""}>{item.icon}</span>
-                                <span className="flex-1">{item.label}</span>
-                                {item.isLink && (
-                                    <ExternalLink size={14} className="text-gray-500" />
-                                )}
-                                {item.id === 'chat-admin' && (
-                                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                                )}
-                            </button>
-                        ))}
-                    </nav>
                 </div>
 
-                <div className="mt-auto p-6 border-t border-white/10 mx-6 mb-2">
+                {/* Navigation Groups */}
+                <nav className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+                    {sidebarGroups.map((group) => (
+                        <div key={group.id} className="mb-0.5">
+                            {/* Group Header */}
+                            {!sidebarCollapsed && (
+                                <button
+                                    onClick={() => toggleGroup(group.id)}
+                                    className="w-full flex items-center justify-between px-4 py-2.5 text-[11px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
+                                >
+                                    <span>{group.title}</span>
+                                    {expandedGroups[group.id]
+                                        ? <ChevronDown size={13} className="text-gray-300" />
+                                        : (isRtl ? <ChevronRight size={13} className="text-gray-300 rotate-180" /> : <ChevronRight size={13} className="text-gray-300" />)
+                                    }
+                                </button>
+                            )}
+
+                            {/* Group Items */}
+                            {(sidebarCollapsed || expandedGroups[group.id]) && (
+                                <div className={`${!sidebarCollapsed ? 'pb-2' : ''}`}>
+                                    {group.items.map((item: any) => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => {
+                                                if (item.isLink && item.href) {
+                                                    navigate(item.href);
+                                                } else {
+                                                    setActiveTab(item.id);
+                                                }
+                                            }}
+                                            className={`w-full flex items-center gap-3 text-[13px] transition-all duration-150 ${
+                                                sidebarCollapsed
+                                                    ? 'justify-center px-2 py-3'
+                                                    : `${isRtl ? 'pr-5 pl-4' : 'pl-5 pr-4'} py-2.5`
+                                            } ${
+                                                activeTab === item.id
+                                                    ? `bg-[#FFF4E6] text-[#C45500] font-semibold ${isRtl ? 'border-r-[3px] border-[#FF9900]' : 'border-l-[3px] border-[#FF9900]'}`
+                                                    : `text-gray-600 hover:bg-[#F7F7F7] hover:text-[#0F1111] ${isRtl ? 'border-r-[3px] border-transparent' : 'border-l-[3px] border-transparent'}`
+                                            }`}
+                                            title={sidebarCollapsed ? item.label : undefined}
+                                        >
+                                            <span className={`shrink-0 ${activeTab === item.id ? 'text-[#FF9900]' : 'text-gray-400'}`}>
+                                                {item.icon}
+                                            </span>
+                                            {!sidebarCollapsed && (
+                                                <>
+                                                    <span className="truncate flex-1 text-start">{item.label}</span>
+                                                    {item.isLink && (
+                                                        <ExternalLink size={12} className="text-gray-300 shrink-0" />
+                                                    )}
+                                                    {item.id === 'chat-admin' && (
+                                                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+                                                    )}
+                                                </>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Divider between groups */}
+                            {!sidebarCollapsed && <div className="mx-4 border-b border-gray-100" />}
+                        </div>
+                    ))}
+                </nav>
+
+                {/* Logout */}
+                <div className="border-t border-gray-200 p-3 shrink-0">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 text-gray-400 hover:text-red-400 transition-colors"
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-150 ${
+                            sidebarCollapsed ? 'justify-center' : ''
+                        }`}
                     >
-                        <LogOut size={20} />
-                        <span>{t('nav.logout')}</span>
+                        <LogOut size={18} />
+                        {!sidebarCollapsed && <span className="font-medium">{t('nav.logout')}</span>}
                     </button>
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col h-full overflow-hidden p-4 pr-0">
-                {/* Header */}
-                <header className="flex items-center justify-between px-8 py-4 mb-2">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.dashboard')}</h2>
-                        <p className="text-gray-500 text-sm">{t('dashboard.welcomeAdmin')}</p>
+            {/* =================== MAIN CONTENT AREA =================== */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+
+                {/* -------- Top Header Bar (Amazon Dark Navy) -------- */}
+                <header className="bg-[#232F3E] shrink-0 px-5 flex items-center justify-between h-[52px]">
+                    <div className="flex items-center gap-3 min-w-0">
+                        {/* Sidebar Toggle */}
+                        <button
+                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                            className="text-gray-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10"
+                        >
+                            <Menu size={20} />
+                        </button>
+
+                        {/* Breadcrumb */}
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h2 className="text-white font-semibold text-sm whitespace-nowrap">{t('dashboard.dashboard')}</h2>
+                            <ArrowRight size={14} className={`text-gray-500 shrink-0 ${isRtl ? 'rotate-180' : ''}`} />
+                            <span className="text-[#FF9900] text-sm font-medium truncate">{getCurrentTabLabel()}</span>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <div className="relative w-96 hidden md:block">
-                            <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${currentDir === 'rtl' ? 'left-4' : 'right-4'}`} size={20} />
+                    <div className="flex items-center gap-3">
+                        {/* Search */}
+                        <div className="relative w-72 hidden lg:block">
+                            <Search className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRtl ? 'left-3' : 'right-3'}`} size={16} />
                             <Input
                                 placeholder={t('dashboard.searchAnything')}
-                                className={`w-full bg-white border-none rounded-full py-6 shadow-sm focus-visible:ring-1 focus-visible:ring-orange-500 ${currentDir === 'rtl' ? 'pl-12 pr-6' : 'pr-12 pl-6'}`}
+                                className={`w-full bg-[#37475A] border-[#485769] text-white placeholder:text-gray-400 rounded-md h-9 text-sm focus-visible:ring-1 focus-visible:ring-[#FF9900] focus-visible:border-[#FF9900] ${isRtl ? 'pl-9 pr-3' : 'pr-9 pl-3'}`}
                             />
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            {/* Quick Chat Button */}
+                        {/* Helpdesk */}
+                        <button
+                            onClick={() => navigate('/admin/support')}
+                            className="text-gray-400 hover:text-[#FF9900] transition-colors p-1.5 rounded-md hover:bg-white/10"
+                            title={t('dashboard.helpdesk') || 'مركز الدعم'}
+                        >
+                            <Headphones size={19} />
+                        </button>
 
+                        {/* Notifications */}
+                        <button className="relative text-gray-400 hover:text-[#FF9900] transition-colors p-1.5 rounded-md hover:bg-white/10">
+                            <Bell size={19} />
+                            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#FF9900] rounded-full text-[9px] flex items-center justify-center text-white font-bold border border-[#232F3E]">
+                                3
+                            </span>
+                        </button>
 
-                            {/* Quick Helpdesk Button */}
-                            <button
-                                onClick={() => navigate('/admin/support')}
-                                className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                                title={t('dashboard.helpdesk') || 'مركز الدعم'}
-                            >
-                                <Headphones size={20} className="text-white" />
-                            </button>
-
-                            <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors relative">
-                                <Bell size={20} className="text-gray-600" />
-
-                            </button>
-
-                            <div className={`flex items-center gap-3 ${currentDir === 'rtl' ? 'pr-4 border-r' : 'pl-4 border-l'} border-gray-200`}>
-                                <Avatar className="w-12 h-12 border-2 border-white shadow-sm cursor-pointer">
-                                    <AvatarImage src="https://github.com/shadcn.png" />
-                                    <AvatarFallback>AD</AvatarFallback>
-                                </Avatar>
-                                <div className="hidden lg:block text-right">
-                                    <p className="text-sm font-bold text-gray-900">Alex Meian</p>
-                                    <p className="text-xs text-gray-500">Product Manager</p>
-                                </div>
+                        {/* Divider + Avatar */}
+                        <div className={`flex items-center gap-2.5 ${isRtl ? 'pr-3 border-r' : 'pl-3 border-l'} border-gray-600`}>
+                            <Avatar className="w-8 h-8 border-2 border-[#37475A]">
+                                <AvatarImage src="https://github.com/shadcn.png" />
+                                <AvatarFallback className="bg-[#37475A] text-white text-xs">AD</AvatarFallback>
+                            </Avatar>
+                            <div className="hidden xl:block">
+                                <p className="text-xs font-medium text-gray-200 leading-tight">Admin</p>
+                                <p className="text-[10px] text-gray-500 leading-tight">Manager</p>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Dashboard Content */}
-                <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
+                {/* -------- Secondary Metrics Bar -------- */}
+                <div className="bg-[#37475A] shrink-0 px-5 flex items-center justify-between h-[38px] border-t border-[#485769]">
+                    <div className="flex items-center gap-1 overflow-x-auto">
+                        <button
+                            onClick={() => setActiveTab('analytics')}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${activeTab === 'analytics' ? 'bg-[#FF9900] text-[#232F3E]' : 'text-gray-300 hover:text-[#FF9900]'}`}
+                        >
+                            <DollarSign size={13} />
+                            <span>${totalRevenue.toFixed(0)}</span>
+                        </button>
+                        <span className="w-px h-4 bg-gray-500 shrink-0 mx-1" />
+                        <button
+                            onClick={() => setActiveTab('orders')}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${activeTab === 'orders' ? 'bg-[#FF9900] text-[#232F3E]' : 'text-gray-300 hover:text-[#FF9900]'}`}
+                        >
+                            <ShoppingBag size={13} />
+                            <span>{totalOrders} {t('dashboard.orders')}</span>
+                        </button>
+                        <span className="w-px h-4 bg-gray-500 shrink-0 mx-1" />
+                        <button
+                            onClick={() => setActiveTab('users')}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${activeTab === 'users' ? 'bg-[#FF9900] text-[#232F3E]' : 'text-gray-300 hover:text-[#FF9900]'}`}
+                        >
+                            <Users size={13} />
+                            <span>{totalUsers} {t('dashboard.users')}</span>
+                        </button>
+                        <span className="w-px h-4 bg-gray-500 shrink-0 mx-1" />
+                        <button
+                            onClick={() => setActiveTab('products')}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${activeTab === 'products' ? 'bg-[#FF9900] text-[#232F3E]' : 'text-gray-300 hover:text-[#FF9900]'}`}
+                        >
+                            <Box size={13} />
+                            <span>{totalProducts} {t('dashboard.projects')}</span>
+                        </button>
+                    </div>
 
-                    {/* Stats Row */}
+                    <button
+                        onClick={() => setShowAddProductModal(true)}
+                        className="flex items-center gap-1.5 bg-[#FF9900] hover:bg-[#E88B00] text-[#232F3E] rounded px-3 py-1.5 text-xs font-bold transition-colors shrink-0 shadow-sm"
+                    >
+                        <PlusCircle size={14} />
+                        <span className="hidden sm:inline">{t('dashboard.createProject')}</span>
+                    </button>
+                </div>
+
+                {/* -------- Scrollable Content Area -------- */}
+                <main className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+
+                    {/* =================== ANALYTICS TAB =================== */}
                     {activeTab === 'analytics' && (
-                        <div className="space-y-8">
+                        <div className="space-y-6">
+                            {/* Section Title */}
                             <div className="flex items-center justify-between">
-                                <h3 className="text-xl font-bold text-gray-800">{t('dashboard.overview')}</h3>
-                                <div className="bg-white px-4 py-2 rounded-full shadow-sm text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-50">
+                                <div>
+                                    <h3 className="text-xl font-bold text-[#0F1111]">{t('dashboard.overview')}</h3>
+                                    <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.welcomeAdmin')}</p>
+                                </div>
+                                <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
                                     {t('dashboard.last30Days')}
+                                </button>
+                            </div>
+
+                            {/* KPI Cards - Amazon Style */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {/* Revenue */}
+                                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer" onClick={() => setActiveTab('withdrawals')}>
+                                    <div className="h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                                    <div className="p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-sm font-medium text-gray-500">{t('dashboard.totalRevenue')}</span>
+                                            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                                                <DollarSign size={18} className="text-emerald-600" />
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-[#0F1111]">
+                                            ${dashboardStats?.finances?.platformTotal?.toFixed(2) || totalRevenue.toFixed(2)}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                                            <div className="flex items-center gap-1">
+                                                <TrendingUp size={13} className="text-emerald-600" />
+                                                <span className="text-[11px] font-bold text-emerald-600">Admin: ${dashboardStats?.finances?.adminBalance?.toFixed(2) || 0}</span>
+                                            </div>
+                                            <span className="text-[11px] text-gray-400">| Designer: ${dashboardStats?.finances?.designerBalance?.toFixed(2) || 0}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Products */}
+                                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer" onClick={() => setActiveTab('products')}>
+                                    <div className="h-1 bg-gradient-to-r from-orange-400 to-orange-600" />
+                                    <div className="p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-sm font-medium text-gray-500">{t('dashboard.projects')}</span>
+                                            <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                                                <Box size={18} className="text-orange-600" />
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-[#0F1111]">{totalProducts}</p>
+                                        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                                            <TrendingDown size={13} className="text-[#CC0C39]" />
+                                            <span className="text-[11px] font-bold text-[#CC0C39]">-10%</span>
+                                            <span className="text-[11px] text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Orders */}
+                                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer" onClick={() => setActiveTab('orders')}>
+                                    <div className="h-1 bg-gradient-to-r from-blue-400 to-blue-600" />
+                                    <div className="p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-sm font-medium text-gray-500">{t('dashboard.orders')}</span>
+                                            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                                                <ShoppingCart size={18} className="text-blue-600" />
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-[#0F1111]">{totalOrders}</p>
+                                        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                                            <TrendingUp size={13} className="text-[#067D62]" />
+                                            <span className="text-[11px] font-bold text-[#067D62]">+8%</span>
+                                            <span className="text-[11px] text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Users */}
+                                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group cursor-pointer" onClick={() => setActiveTab('users')}>
+                                    <div className="h-1 bg-gradient-to-r from-purple-400 to-purple-600" />
+                                    <div className="p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="text-sm font-medium text-gray-500">{t('dashboard.resources')}</span>
+                                            <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                                                <Users size={18} className="text-purple-600" />
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-[#0F1111]">{totalUsers}</p>
+                                        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                                            <TrendingUp size={13} className="text-[#067D62]" />
+                                            <span className="text-[11px] font-bold text-[#067D62]">+2%</span>
+                                            <span className="text-[11px] text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <Card
-                                    className="p-6 border-none shadow-sm hover:shadow-lg transition-all duration-300 rounded-[24px] flex flex-col justify-between h-[160px]"
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-purple-50 mb-4`}>
-                                        {iconMap["dollar-sign"]}
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm mb-1">{t('dashboard.totalRevenue')}</p>
-                                        <h3 className="text-2xl font-bold text-gray-900">${dashboardStats?.finances?.platformTotal?.toFixed(2) || totalRevenue.toFixed(2)}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className={`text-xs font-bold text-green-500`}>
-                                            Admin: ${dashboardStats?.finances?.adminBalance?.toFixed(2) || 0}
-                                        </span>
-                                        <span className="text-xs text-gray-400">Designer: ${dashboardStats?.finances?.designerBalance?.toFixed(2) || 0}</span>
-                                    </div>
-                                </Card>
-
-                                <Card
-                                    className="p-6 border-none shadow-sm hover:shadow-lg transition-all duration-300 rounded-[24px] flex flex-col justify-between h-[160px]"
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-orange-50 mb-4`}>
-                                        {iconMap["box"]}
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm mb-1">{t('dashboard.projects')}</p>
-                                        <h3 className="text-2xl font-bold text-gray-900">{totalProducts}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className={`text-xs font-bold text-red-500`}>
-                                            -10%
-                                        </span>
-                                        <span className="text-xs text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
-                                    </div>
-                                </Card>
-
-                                <Card
-                                    className="p-6 border-none shadow-sm hover:shadow-lg transition-all duration-300 rounded-[24px] flex flex-col justify-between h-[160px]"
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-blue-50 mb-4`}>
-                                        {iconMap["shopping-cart"]}
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm mb-1">{t('dashboard.orders')}</p>
-                                        <h3 className="text-2xl font-bold text-gray-900">{totalOrders}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className={`text-xs font-bold text-green-500`}>
-                                            +8%
-                                        </span>
-                                        <span className="text-xs text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
-                                    </div>
-                                </Card>
-
-                                <Card
-                                    className="p-6 border-none shadow-sm hover:shadow-lg transition-all duration-300 rounded-[24px] flex flex-col justify-between h-[160px]"
-                                >
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-yellow-50 mb-4`}>
-                                        {iconMap["user"]}
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm mb-1">{t('dashboard.resources')}</p>
-                                        <h3 className="text-2xl font-bold text-gray-900">{totalUsers}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className={`text-xs font-bold text-green-500`}>
-                                            +2%
-                                        </span>
-                                        <span className="text-xs text-gray-400">{t('dashboard.increaseFromLastMonth')}</span>
-                                    </div>
-                                </Card>
+                            {/* Quick Actions Bar */}
+                            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-bold text-[#0F1111]">Quick Actions</h4>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={() => setShowAddProductModal(true)}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-b from-[#FFD814] to-[#F7CA00] hover:from-[#F7CA00] hover:to-[#E8B800] text-[#0F1111] rounded-lg text-sm font-medium transition-all shadow-sm border border-[#FCD200]"
+                                    >
+                                        <PlusCircle size={16} />
+                                        Add Product
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('orders')}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        <ShoppingBag size={16} />
+                                        View Orders
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('requests')}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        <GraduationCap size={16} />
+                                        Instructor Requests
+                                    </button>
+                                    <button
+                                        onClick={() => navigate('/admin/support')}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        <Headphones size={16} />
+                                        Support Center
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('chat')}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                                    >
+                                        <MessageCircle size={16} />
+                                        Messages
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                <Card className="lg:col-span-2 p-8 border-none shadow-sm rounded-[30px]">
-                                    <div className="flex items-center justify-between mb-8">
-                                        <h3 className="text-lg font-bold text-gray-900">{t('dashboard.platformStats')}</h3>
-                                        <div className="flex gap-2">
-                                            <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium">All</span>
-                                        </div>
+                            {/* Platform Stats + Progress Ring */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Platform Stats */}
+                                <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-base font-bold text-[#0F1111]">{t('dashboard.platformStats')}</h3>
+                                        <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-500">All</span>
                                     </div>
                                     <PlatformStats stats={dashboardStats} loading={loadingStats} />
-                                </Card>
+                                </div>
 
-                                <Card className="p-8 border-none shadow-sm rounded-[30px] bg-[#fdfdfd]">
-                                    <div className="flex items-center justify-between mb-8">
-                                        <h3 className="text-lg font-bold text-gray-900">{t('dashboard.overallProgress')}</h3>
-                                    </div>
+                                {/* Progress Ring (SVG Donut) */}
+                                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                                    <h3 className="text-base font-bold text-[#0F1111] mb-6">{t('dashboard.overallProgress')}</h3>
                                     <div className="flex items-center justify-center h-[250px]">
-                                        <div className="relative w-48 h-48 rounded-full border-[12px] border-orange-100 flex items-center justify-center">
-                                            <div className="absolute inset-0 border-[12px] border-orange-500 rounded-full border-l-transparent border-b-transparent rotate-45"></div>
-                                            <div className="text-center">
-                                                <span className="text-3xl font-bold text-gray-900">72%</span>
-                                                <p className="text-xs text-gray-400">{t('dashboard.completed')}</p>
+                                        <div className="relative w-44 h-44">
+                                            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                                <path
+                                                    d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                    fill="none"
+                                                    stroke="#F3F4F6"
+                                                    strokeWidth="3"
+                                                />
+                                                <path
+                                                    d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                    fill="none"
+                                                    stroke="url(#progressGradient)"
+                                                    strokeWidth="3"
+                                                    strokeDasharray="72, 100"
+                                                    strokeLinecap="round"
+                                                    className="transition-all duration-1000"
+                                                />
+                                                <defs>
+                                                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                        <stop offset="0%" stopColor="#FF9900" />
+                                                        <stop offset="100%" stopColor="#FF6600" />
+                                                    </linearGradient>
+                                                </defs>
+                                            </svg>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                                <span className="text-3xl font-bold text-[#0F1111]">72%</span>
+                                                <span className="text-xs text-gray-400 mt-1">{t('dashboard.completed')}</span>
                                             </div>
                                         </div>
                                     </div>
-                                </Card>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Other Tabs Content */}
-                    <div className="mt-6">
+                    {/* =================== OTHER TABS CONTENT =================== */}
+                    <div className={activeTab !== 'analytics' ? '' : 'hidden'}>
                         {/* Instructor Requests */}
                         {activeTab === "requests" && <InstructorRequestsComponent token={token || ""} />}
                         {activeTab === "orders" && <OrdersComponent orders={orders} token={token || ""} fetchOrders={fetchOrders} searchQuery="" />}
@@ -697,30 +937,30 @@ const AdminDashboard = () => {
                             <div className="space-y-6">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                                            <Users className="h-6 w-6 text-blue-600" />
+                                        <h2 className="text-2xl font-bold text-[#0F1111] flex items-center gap-2">
+                                            <Users className="h-6 w-6 text-[#FF9900]" />
                                             {t('dashboard.usersDirectory') || 'Users Directory'}
                                         </h2>
                                         <p className="text-sm text-gray-500 mt-1">Manage students, instructors, and admins from one place.</p>
                                     </div>
 
                                     {/* Sub-tabs / Filter */}
-                                    <div className="flex p-1 bg-gray-100 rounded-xl self-start md:self-auto">
+                                    <div className="flex p-1 bg-gray-100 rounded-lg self-start md:self-auto border border-gray-200">
                                         <button
                                             onClick={() => setUserFilter('student')}
-                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${userFilter === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userFilter === 'student' ? 'bg-white text-[#C45500] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-900'}`}
                                         >
                                             Students
                                         </button>
                                         <button
                                             onClick={() => setUserFilter('instructor')}
-                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${userFilter === 'instructor' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userFilter === 'instructor' ? 'bg-white text-[#C45500] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-900'}`}
                                         >
                                             Instructors
                                         </button>
                                         <button
                                             onClick={() => setUserFilter('all')}
-                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${userFilter === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${userFilter === 'all' ? 'bg-white text-[#C45500] shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-900'}`}
                                         >
                                             All Users
                                         </button>
@@ -768,7 +1008,7 @@ const AdminDashboard = () => {
                                         {/* Empty State */}
                                         {((userFilter === 'student' && allStudents.length === 0) ||
                                             (userFilter === 'instructor' && users.filter((u: any) => u.role === 'instructor' || u.role === 'manager').length === 0)) && (
-                                                <div className="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-gray-200 col-span-full">
+                                                <div className="text-center py-20 bg-white rounded-lg border-2 border-dashed border-gray-200 col-span-full">
                                                     <Users size={48} className="mx-auto text-gray-300 mb-4" />
                                                     <p className="text-gray-500 font-medium">No users found for this category.</p>
                                                 </div>
@@ -818,7 +1058,7 @@ const AdminDashboard = () => {
                         {activeTab === "allCourses" && (
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-bold text-gray-800">{t('dashboard.allCourses')}</h2>
+                                    <h2 className="text-xl font-bold text-[#0F1111]">{t('dashboard.allCourses')}</h2>
                                     <span className="text-sm text-gray-500">{allCourses.length} {t('dashboard.courses')}</span>
                                 </div>
                                 <AllCoursesTable courses={allCourses} loading={loadingCourses} />
@@ -828,7 +1068,7 @@ const AdminDashboard = () => {
                             <WithdrawalsManager token={token || ""} />
                         )}
                         {activeTab === "chat" && (
-                            <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl">
+                            <div className="h-[calc(100vh-230px)] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
                                 <ChatDashboardWidget variant="full" targetUserId={chatRecipient} />
                             </div>
                         )}
@@ -847,7 +1087,7 @@ const AdminDashboard = () => {
                         {activeTab === "chat-admin" && <AdminChatPanel />}
                         {activeTab === "hero-banners" && <HeroBannerManager token={token || ""} />}
                         {activeTab === "course-management-ai" && (
-                            <div className="h-[calc(100vh-140px)] rounded-2xl overflow-hidden shadow-2xl bg-white">
+                            <div className="h-[calc(100vh-230px)] rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white">
                                 <CourseManagementAI
                                     courses={allCourses}
                                     students={allStudents}
@@ -862,9 +1102,10 @@ const AdminDashboard = () => {
                             </div>
                         )}
                     </div>
-                </div>
-            </main>
+                </main>
+            </div>
 
+            {/* Add Product Modal */}
             {showAddProductModal && (
                 <AddProductModal
                     show={showAddProductModal}
@@ -881,7 +1122,7 @@ const AdminDashboard = () => {
 
 const Loading = ({ text }: { text: string }) => (
     <div className="flex flex-col items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF9900] mb-4"></div>
         <p className="text-gray-600 text-sm">{text}</p>
     </div>
 );

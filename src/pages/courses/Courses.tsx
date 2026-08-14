@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { API_BASE_URL } from '@/config/env';
 import { Heart, SlidersHorizontal } from "lucide-react";
-import CourseCard from "@/components/courses/CourseCard";
+import CourseCard from "@/components/courses/courseCard";
 import FilterSidebar from "@/components/courses/FilterSidebar";
 import {
   Select,

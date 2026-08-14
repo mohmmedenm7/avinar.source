@@ -62,7 +62,7 @@ export const getVideoUrl = (videoPath: string | undefined): string => {
         return `${import.meta.env.VITE_API_BASE_URL}/${cleanPath}`;
     }
 
-    // If it's already a full URL (including YouTube), return as is
+    // If it's already a full URL (including YouTube, R2, etc.), return as is
     if (cleanedPath.startsWith('http://') || cleanedPath.startsWith('https://')) {
         return cleanedPath;
     }
@@ -70,3 +70,16 @@ export const getVideoUrl = (videoPath: string | undefined): string => {
     // Otherwise, prepend the API_BASE_URL
     return `${import.meta.env.VITE_API_BASE_URL}/${cleanedPath}`;
 };
+
+/**
+ * Check if a URL is from Cloudflare R2
+ */
+export const isR2Url = (url: string | undefined): boolean => {
+    if (!url) return false;
+    return (
+        url.includes('r2.cloudflarestorage.com') ||
+        url.includes('r2.dev') ||
+        url.includes('pub-')
+    );
+};
+

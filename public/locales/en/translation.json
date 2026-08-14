@@ -176,7 +176,8 @@
         "bankTransferWithdraw": "Direct Bank Transfer",
         "chat": "Messages",
         "chatAdmin": "Chat Management",
-        "myStudents": "My Students"
+        "myStudents": "My Students",
+        "noCommunities": "No communities yet"
     },
     "aiImages": {
         "description": "Generate stunning images for your courses using AI.",

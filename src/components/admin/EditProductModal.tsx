@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Upload, X, Play, CheckCircle2, Gift } from "lucide-react";
 import { API_BASE_URL } from '@/config/env';
 import { useToast } from "@/components/ui/use-toast";
@@ -139,7 +139,7 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
   const handleVideoChange = (e) => {
     if (e.target.files?.[0]) {
       const file = e.target.files[0];
-      handleInputChange("vedios", [file]);
+      handleInputChange("videos", [file]);
       setVideoName(file.name);
     }
   };
@@ -190,8 +190,8 @@ export const EditProductModal = ({ product, formData, setFormData, setEditingPro
     }
 
     // Append Video if it's selected
-    if (formData.vedios && formData.vedios.length > 0 && formData.vedios[0] instanceof File) {
-      fd.append("vedios", formData.vedios[0]);
+    if (formData.videos && formData.videos.length > 0 && formData.videos[0] instanceof File) {
+      fd.append("videos", formData.videos[0]);
     }
 
     // Append What Will You Learn
